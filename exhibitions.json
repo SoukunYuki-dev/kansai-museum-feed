@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-02",
+  "updatedAt": "2026-09-03",
   "museums": [
     {
       "id": "kyohaku",
@@ -200,7 +200,7 @@
       "start": "2026-10-06",
       "end": "2026-11-29",
       "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2026_genji/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "f317fdcac0c2d571",
@@ -209,7 +209,7 @@
       "start": "2027-04-20",
       "end": "2027-05-30",
       "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2027_kano/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "a36e257e2a750b71",
@@ -218,7 +218,7 @@
       "start": "2027-06-08",
       "end": "2027-07-19",
       "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2027_kano/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "d8f54e8cc4b55712",
@@ -236,7 +236,7 @@
       "start": "2026-07-18",
       "end": "2026-09-23",
       "url": "https://kyotocity-kyocera.museum/exhibition/20260718-20260923",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "e35365db6b1deb1f",
@@ -245,7 +245,7 @@
       "start": "2026-06-03",
       "end": "2026-09-06",
       "url": "https://kyotocity-kyocera.museum/exhibition/20260603-20260906",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "4defb124a5afa566",
@@ -263,7 +263,7 @@
       "start": "2026-07-04",
       "end": "2026-09-27",
       "url": "https://nakka-art.jp/exhibition-post/karlwalser-2026/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "a39ac0af10e95713",
@@ -272,7 +272,7 @@
       "start": "2026-08-21",
       "end": "2026-09-27",
       "url": "https://nakka-art.jp/exhibition-post/vermeer2026/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "826d083b3793c866",
@@ -281,7 +281,7 @@
       "start": "2026-10-10",
       "end": "2026-12-20",
       "url": "https://nakka-art.jp/exhibition-post/nichibiten50/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "f7873c442e709c24",
@@ -299,7 +299,7 @@
       "start": "2026-07-11",
       "end": "2026-09-06",
       "url": "https://www.osaka-art-museum.jp/special_exhibition/8301",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "242a76228aff74c1",
@@ -317,7 +317,7 @@
       "start": "2027-02-06",
       "end": "2027-04-04",
       "url": "https://www.osaka-art-museum.jp/special_exhibition/10344",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "ba260a45643f9574",
@@ -371,7 +371,7 @@
       "start": "2026-07-04",
       "end": "2026-09-06",
       "url": "https://www.bunpaku.or.jp/exhi_special_post/20260704-0906/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "dea61e9d78ee46cb",
@@ -380,7 +380,7 @@
       "start": "2026-09-19",
       "end": "2026-11-15",
       "url": "https://www.bunpaku.or.jp/exhi_special_post/20260919-1115/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "ccc1f2b2db1f7441",
@@ -425,7 +425,7 @@
       "start": "2026-09-11",
       "end": "2026-11-23",
       "url": "https://www.shigamuseum.jp/exhibitions/12995/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "6bdcc685244c95fa",
@@ -434,7 +434,7 @@
       "start": "2027-01-15",
       "end": "2027-03-22",
       "url": "https://www.shigamuseum.jp/exhibitions/12978/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "003cbb53bb1294c4",
@@ -497,7 +497,7 @@
       "start": "2026-09-12",
       "end": "2026-12-20",
       "url": "https://kyotocity-kyocera.museum/exhibition/20260912-20261220",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "6addd47068c1f7c1",
@@ -506,7 +506,7 @@
       "start": "2026-09-19",
       "end": "2026-12-20",
       "url": "https://kyotocity-kyocera.museum/exhibition/20260919-20261220",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "5f67fd983518d75a",
@@ -515,7 +515,7 @@
       "start": "2026-10-03",
       "end": "2026-12-06",
       "url": "https://kyotocity-kyocera.museum/exhibition/20261003-20261206",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "4558f1e45e6a16a0",
@@ -524,7 +524,7 @@
       "start": "2026-12-17",
       "end": "2027-01-11",
       "url": "https://kyotocity-kyocera.museum/exhibition/20261217-20270111",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "70872ce1d5efbaeb",
@@ -533,7 +533,7 @@
       "start": "2026-12-19",
       "end": "2027-01-16",
       "url": "https://kyotocity-kyocera.museum/exhibition/20261219-20270116",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "decbe2b5e36817d2",
@@ -542,7 +542,7 @@
       "start": "2027-01-15",
       "end": "2027-04-18",
       "url": "https://kyotocity-kyocera.museum/exhibition/20270115-20270418",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "cccd8130f864eb13",
@@ -551,7 +551,7 @@
       "start": "2027-02-06",
       "end": "2027-05-05",
       "url": "https://kyotocity-kyocera.museum/exhibition/20270206-20270505",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "1dd3d180b0921f9f",
@@ -560,7 +560,7 @@
       "start": "2027-05-26",
       "end": "2027-08-29",
       "url": "https://kyotocity-kyocera.museum/exhibition/20270526-20270829",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "62532064ed2558b6",
@@ -569,7 +569,7 @@
       "start": "2027-10-02",
       "end": "2027-12-12",
       "url": "https://kyotocity-kyocera.museum/exhibition/20271002-20271212",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "6792b4e8d6dca13c",
@@ -578,7 +578,7 @@
       "start": "2026-11-14",
       "end": "2026-12-13",
       "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir13/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "b932b735afdd4994",
@@ -587,7 +587,7 @@
       "start": "2026-12-19",
       "end": "2027-01-17",
       "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir14/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "0b807c9d8d5894f4",
@@ -596,7 +596,7 @@
       "start": "2027-01-23",
       "end": "2027-02-21",
       "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir15/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     },
     {
       "id": "ef2e4d15dc7fee29",
@@ -605,7 +605,7 @@
       "start": "2026-10-03",
       "end": "2026-12-13",
       "url": "https://www.shigamuseum.jp/exhibitions/14001/",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-03"
     }
   ],
   "note": "公式確認済みの一部の特別展・企画展。網羅一覧ではありません。"
