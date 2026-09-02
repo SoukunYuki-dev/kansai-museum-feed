@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      # Empty until adapters are reviewed. Failed/unreviewed museums keep saved data.
-      AUTO_PUBLISH_MUSEUMS: ${{ vars.AUTO_PUBLISH_MUSEUMS }}
+      # Six adapters reviewed against the initial GitHub collection report.
+      AUTO_PUBLISH_MUSEUMS: kyohaku,kyocera,nakka,osakaart,bunpaku,shiga
     steps:
       - uses: actions/checkout@v4
       - name: Prepare self-contained collector
@@ -38,8 +38,8 @@ jobs:
           import argparse, copy, hashlib, json, re, time, unicodedata
 
           # Only explicit years establish a date range. Never guess the year from today's date.
-          DATE = r'(?:(?P<{p}y>20\d{{2}})\s*[年./-]\s*)?(?P<{p}m>\d{{1,2}})\s*[月./-]\s*(?P<{p}d>\d{{1,2}})\s*日?'
-          RANGE = re.compile(DATE.format(p='a') + r'\s*(?:\([^)]*\))?\s*(?:[A-Za-z]{3}\.?\s*)?[～〜~–—－-]\s*' + DATE.format(p='b'))
+          DATE = r'(?:(?P<{p}y>20\d{{2}})\s*[蟷ｴ./-]\s*)?(?P<{p}m>\d{{1,2}})\s*[譛�./-]\s*(?P<{p}d>\d{{1,2}})\s*譌･?'
+          RANGE = re.compile(DATE.format(p='a') + r'\s*(?:\([^)]*\))?\s*(?:[A-Za-z]{3}\.?\s*)?[�槭恠窶凪費ｼ�-]\s*' + DATE.format(p='b'))
 
           def date_ranges(text):
               text=unicodedata.normalize('NFKC', text)
@@ -102,19 +102,32 @@ jobs:
                   if not block:continue
                   node,t,(start,end)=block
                   if config.get('require') and not re.search(config['require'],t):continue
-                  if re.search(r'コレクション|常設展|名品ギャラリー|講演会|ワークショップ|公募展',t):continue
+                  if re.search(r'繧ｳ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ|蟶ｸ險ｭ螻怖蜷榊刀繧ｮ繝｣繝ｩ繝ｪ繝ｼ|隰帶ｼ比ｼ嘶繝ｯ繝ｼ繧ｯ繧ｷ繝ｧ繝��|蜈ｬ蜍溷ｱ�',t):continue
                   titles=[n.text() for n in node.walk() if n.tag in ('h2','h3','h4')]
                   title=' '.join(titles) if titles else a.text()
                   title=RANGE.sub('',unicodedata.normalize('NFKC',title))
-                  title=re.sub(r'開催中|開催予定|終了まで\d+日|チケット購入|\([^)]*\)\s*$','',title)
-                  title=' '.join(title.split()).strip(' ·|-')
-                  if len(title)<3 or title in ('詳細を見る','Read More'):continue
+                  title=re.sub(r'髢句ぎ荳ｭ|髢句ぎ莠亥ｮ嘶邨ゆｺ�∪縺ｧ\d+譌･|繝√こ繝�ヨ雉ｼ蜈･|\([^)]*\)\s*$','',title)
+                  title=' '.join(title.split()).strip(' ﾂｷ|-')
+                  if len(title)<3 or title in ('隧ｳ邏ｰ繧定ｦ九ｋ','Read More'):continue
                   key=hashlib.sha256(f"{config['id']}|{title}|{start}".encode()).hexdigest()[:16]
                   out[key]=dict(id=key,museumId=config['id'],title=title,start=start,end=end,url=url,verifiedAt=checked)
               return list(out.values())
 
           def title_key(e):
-              return re.sub(r'\s+','',unicodedata.normalize('NFKC',e['title'])).removeprefix('特別展')
+              return re.sub(r'\s+','',unicodedata.normalize('NFKC',e['title'])).removeprefix('迚ｹ蛻･螻�')
+
+          # One-time ID migration: these exact report entries were reviewed against the seed.
+          LEGACY_IDS = {'0507be3857aaf784': 'f317fdcac0c2d571', '3de57139fcc39d78': 'a36e257e2a750b71', '62902e60b8845143': '894d62a6dc68f305', '137d73fe3d195ac1': 'e35365db6b1deb1f', '608160a54230f0cb': 'a39ac0af10e95713', '9dfc74346c9bdaa0': 'ea9da9675bc35563', 'a649ba0f5eac4c7d': 'e26b95490c790430', 'ef420067f429247e': '78395bc937b7cc7e', '25126c2509470144': 'dea61e9d78ee46cb', 'b5a52cdcdf11cdae': '6bdcc685244c95fa'}
+
+          def clean_title(title, mid):
+              title=unicodedata.normalize('NFKC', title)
+              if mid=='kyocera':
+                  title=re.sub(r'\s+莨壼�ｴ\[.*\]\s*$', '', title)
+              if mid=='bunpaku':
+                  title=re.sub(r'\s+\([譛育↓豌ｴ譛ｨ驥大悄譌･繝ｻ逾昜ｼ曽+\)\s+[0-9繝ｻ]+髫主ｱ慕､ｺ螳､\s*$', '', title)
+              if mid=='osakaart':
+                  title=re.sub(r'\s+迚ｹ蛻･螻表s*$', '', title)
+              return ' '.join(title.split())
 
           def merge(previous,results,checked):
               out=copy.deepcopy(previous);out['updatedAt']=checked
@@ -123,12 +136,19 @@ jobs:
                   if mid not in results:continue
                   entries=results[mid]
                   museum['state']='ok' if entries else 'error'
-                  if not entries:continue
-                  for e in entries:
-                      # Keep stable ids across schedule corrections; never delete missing cards.
-                      match=next((old for old in out['exhibitions'] if old['museumId']==mid and title_key(old)==title_key(e) and abs((date.fromisoformat(old['start'])-date.fromisoformat(e['start'])).days)<180),None)
-                      if match:
-                          stable=match['id'];match.update(e);match['id']=stable
+                  for raw in entries:
+                      e=copy.deepcopy(raw);e['title']=clean_title(e['title'],mid)
+                      stable_id=LEGACY_IDS.get(e['id'],e['id'])
+                      same_museum=[old for old in out['exhibitions'] if old['museumId']==mid]
+                      matches=[old for old in same_museum if old['id']==stable_id]
+                      if not matches:
+                          # Exact date distinguishes multipart exhibitions sharing a detail URL.
+                          matches=[old for old in same_museum if old['url']==e['url'] and old['start']==e['start']]
+                      if not matches:
+                          matches=[old for old in same_museum if title_key(old)==title_key(e) and abs((date.fromisoformat(old['start'])-date.fromisoformat(e['start'])).days)<180]
+                      if len(matches)>1:raise ValueError('ambiguous exhibition identity')
+                      if matches:
+                          old=matches[0];stable=old['id'];old.update(e);old['id']=stable
                       else:out['exhibitions'].append(e)
               return out
 
@@ -282,7 +302,7 @@ jobs:
           MUSEUM_FILE_END
           cat > _museum/sources.json <<'MUSEUM_FILE_END'
           [
-           {"id":"kyohaku","url":"https://www.kyohaku.go.jp/jp/exhibitions/","path":"/jp/exhibitions/special/","require":"特別展"},
+           {"id":"kyohaku","url":"https://www.kyohaku.go.jp/jp/exhibitions/","path":"/jp/exhibitions/special/","require":"迚ｹ蛻･螻�"},
            {"id":"kyocera","url":"https://kyotocity-kyocera.museum/exhibition","path":"/exhibition/[^/]+"},
            {"id":"nakka","url":"https://nakka-art.jp/exhibition/held/","path":"/exhibition-post/"},
            {"id":"osakaart","url":"https://www.osaka-art-museum.jp/","path":"/special_exhibition/"},
@@ -297,135 +317,135 @@ jobs:
             "museums": [
               {
                 "id": "kyohaku",
-                "name": "京都国立博物館",
-                "region": "京都",
-                "genre": "歴史・考古",
+                "name": "莠ｬ驛ｽ蝗ｽ遶句忽迚ｩ鬢ｨ",
+                "region": "莠ｬ驛ｽ",
+                "genre": "豁ｴ蜿ｲ繝ｻ閠�商",
                 "priority": 100,
                 "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
                 "state": "manual"
               },
               {
                 "id": "narahaku",
-                "name": "奈良国立博物館",
-                "region": "奈良",
-                "genre": "歴史・考古",
+                "name": "螂郁憶蝗ｽ遶句忽迚ｩ鬢ｨ",
+                "region": "螂郁憶",
+                "genre": "豁ｴ蜿ｲ繝ｻ閠�商",
                 "priority": 99,
                 "url": "https://www.narahaku.go.jp/",
                 "state": "manual"
               },
               {
                 "id": "minpaku",
-                "name": "国立民族学博物館（みんぱく）",
-                "region": "大阪",
-                "genre": "歴史・考古",
+                "name": "蝗ｽ遶区ｰ第酪蟄ｦ蜊夂黄鬢ｨ�医∩繧薙�縺擾ｼ�",
+                "region": "螟ｧ髦ｪ",
+                "genre": "豁ｴ蜿ｲ繝ｻ閠�商",
                 "priority": 99,
                 "url": "https://www.minpaku.ac.jp/",
                 "state": "manual"
               },
               {
                 "id": "kyocera",
-                "name": "京都市京セラ美術館",
-                "region": "京都",
-                "genre": "美術",
+                "name": "莠ｬ驛ｽ蟶ゆｺｬ繧ｻ繝ｩ鄒手｡馴､ｨ",
+                "region": "莠ｬ驛ｽ",
+                "genre": "鄒手｡�",
                 "priority": 98,
                 "url": "https://kyotocity-kyocera.museum/exhibition",
                 "state": "manual"
               },
               {
                 "id": "nmao",
-                "name": "国立国際美術館",
-                "region": "大阪",
-                "genre": "美術",
+                "name": "蝗ｽ遶句嵜髫帷ｾ手｡馴､ｨ",
+                "region": "螟ｧ髦ｪ",
+                "genre": "鄒手｡�",
                 "priority": 97,
                 "url": "https://www.nmao.go.jp/exhibition/current_exhibition/",
                 "state": "manual"
               },
               {
                 "id": "nakka",
-                "name": "大阪中之島美術館",
-                "region": "大阪",
-                "genre": "美術",
+                "name": "螟ｧ髦ｪ荳ｭ荵句ｳｶ鄒手｡馴､ｨ",
+                "region": "螟ｧ髦ｪ",
+                "genre": "鄒手｡�",
                 "priority": 96,
                 "url": "https://nakka-art.jp/exhibition/held/",
                 "state": "manual"
               },
               {
                 "id": "osakaart",
-                "name": "大阪市立美術館",
-                "region": "大阪",
-                "genre": "美術",
+                "name": "螟ｧ髦ｪ蟶らｫ狗ｾ手｡馴､ｨ",
+                "region": "螟ｧ髦ｪ",
+                "genre": "鄒手｡�",
                 "priority": 95,
                 "url": "https://www.osaka-art-museum.jp/",
                 "state": "manual"
               },
               {
                 "id": "hyogo",
-                "name": "兵庫県立美術館",
-                "region": "兵庫",
-                "genre": "美術",
+                "name": "蜈ｵ蠎ｫ逵檎ｫ狗ｾ手｡馴､ｨ",
+                "region": "蜈ｵ蠎ｫ",
+                "genre": "鄒手｡�",
                 "priority": 94,
                 "url": "https://www.artm.pref.hyogo.jp/exhibition/",
                 "state": "manual"
               },
               {
                 "id": "momak",
-                "name": "京都国立近代美術館",
-                "region": "京都",
-                "genre": "美術",
+                "name": "莠ｬ驛ｽ蝗ｽ遶玖ｿ台ｻ｣鄒手｡馴､ｨ",
+                "region": "莠ｬ驛ｽ",
+                "genre": "鄒手｡�",
                 "priority": 93,
                 "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
                 "state": "manual"
               },
               {
                 "id": "bunpaku",
-                "name": "京都文化博物館",
-                "region": "京都",
-                "genre": "歴史・考古",
+                "name": "莠ｬ驛ｽ譁�喧蜊夂黄鬢ｨ",
+                "region": "莠ｬ驛ｽ",
+                "genre": "豁ｴ蜿ｲ繝ｻ閠�商",
                 "priority": 88,
                 "url": "https://www.bunpaku.or.jp/",
                 "state": "manual"
               },
               {
                 "id": "osakahistory",
-                "name": "大阪歴史博物館",
-                "region": "大阪",
-                "genre": "歴史・考古",
+                "name": "螟ｧ髦ｪ豁ｴ蜿ｲ蜊夂黄鬢ｨ",
+                "region": "螟ｧ髦ｪ",
+                "genre": "豁ｴ蜿ｲ繝ｻ閠�商",
                 "priority": 87,
                 "url": "https://www.osakamushis.jp/",
                 "state": "manual"
               },
               {
                 "id": "harukas",
-                "name": "あべのハルカス美術館",
-                "region": "大阪",
-                "genre": "美術",
+                "name": "縺ゅ∋縺ｮ繝上Ν繧ｫ繧ｹ鄒手｡馴､ｨ",
+                "region": "螟ｧ髦ｪ",
+                "genre": "鄒手｡�",
                 "priority": 86,
                 "url": "https://www.aham.jp/exhibition/future/",
                 "state": "manual"
               },
               {
                 "id": "kobe",
-                "name": "神戸市立博物館",
-                "region": "兵庫",
-                "genre": "歴史・考古",
+                "name": "逾樊虻蟶らｫ句忽迚ｩ鬢ｨ",
+                "region": "蜈ｵ蠎ｫ",
+                "genre": "豁ｴ蜿ｲ繝ｻ閠�商",
                 "priority": 85,
                 "url": "https://www.kobecitymuseum.jp/",
                 "state": "manual"
               },
               {
                 "id": "shiga",
-                "name": "滋賀県立美術館",
-                "region": "滋賀",
-                "genre": "美術",
+                "name": "貊玖ｳ逵檎ｫ狗ｾ手｡馴､ｨ",
+                "region": "貊玖ｳ",
+                "genre": "鄒手｡�",
                 "priority": 84,
                 "url": "https://www.shigamuseum.jp/exhibitions/",
                 "state": "manual"
               },
               {
                 "id": "momaw",
-                "name": "和歌山県立近代美術館",
-                "region": "和歌山",
-                "genre": "美術",
+                "name": "蜥梧ｭ悟ｱｱ逵檎ｫ玖ｿ台ｻ｣鄒手｡馴､ｨ",
+                "region": "蜥梧ｭ悟ｱｱ",
+                "genre": "鄒手｡�",
                 "priority": 83,
                 "url": "https://www.momaw.jp/",
                 "state": "manual"
@@ -433,53 +453,53 @@ jobs:
               {
                 "id": "miho",
                 "name": "MIHO MUSEUM",
-                "region": "滋賀",
-                "genre": "美術",
+                "region": "貊玖ｳ",
+                "genre": "鄒手｡�",
                 "priority": 82,
                 "url": "https://www.miho.jp/upcoming_exhibition/",
                 "state": "manual"
               },
               {
                 "id": "sagawa",
-                "name": "佐川美術館",
-                "region": "滋賀",
-                "genre": "美術",
+                "name": "菴仙ｷ晉ｾ手｡馴､ｨ",
+                "region": "貊玖ｳ",
+                "genre": "鄒手｡�",
                 "priority": 81,
                 "url": "https://www.sagawa-artmuseum.or.jp/",
                 "state": "manual"
               },
               {
                 "id": "omnh",
-                "name": "大阪市立自然史博物館",
-                "region": "大阪",
-                "genre": "科学・自然",
+                "name": "螟ｧ髦ｪ蟶らｫ玖�辟ｶ蜿ｲ蜊夂黄鬢ｨ",
+                "region": "螟ｧ髦ｪ",
+                "genre": "遘大ｭｦ繝ｻ閾ｪ辟ｶ",
                 "priority": 80,
                 "url": "https://omnh.jp/",
                 "state": "manual"
               },
               {
                 "id": "railway",
-                "name": "京都鉄道博物館",
-                "region": "京都",
-                "genre": "科学・自然",
+                "name": "莠ｬ驛ｽ驩�％蜊夂黄鬢ｨ",
+                "region": "莠ｬ驛ｽ",
+                "genre": "遘大ｭｦ繝ｻ閾ｪ辟ｶ",
                 "priority": 79,
                 "url": "https://www.kyotorailwaymuseum.jp/",
                 "state": "unverified"
               },
               {
                 "id": "biwako",
-                "name": "滋賀県立琵琶湖博物館",
-                "region": "滋賀",
-                "genre": "科学・自然",
+                "name": "貊玖ｳ逵檎ｫ狗牲逅ｶ貉門忽迚ｩ鬢ｨ",
+                "region": "貊玖ｳ",
+                "genre": "遘大ｭｦ繝ｻ閾ｪ辟ｶ",
                 "priority": 78,
                 "url": "https://www.biwahaku.jp/",
                 "state": "unverified"
               },
               {
                 "id": "kashihara",
-                "name": "奈良県立橿原考古学研究所附属博物館",
-                "region": "奈良",
-                "genre": "歴史・考古",
+                "name": "螂郁憶逵檎ｫ区ｩｿ蜴溯�商蟄ｦ遐皮ｩｶ謇髯�ｱ槫忽迚ｩ鬢ｨ",
+                "region": "螂郁憶",
+                "genre": "豁ｴ蜿ｲ繝ｻ閠�商",
                 "priority": 77,
                 "url": "https://www.kashikoken.jp/museum/",
                 "state": "unverified"
@@ -489,7 +509,7 @@ jobs:
               {
                 "id": "ca18d7b96349e79e",
                 "museumId": "kyohaku",
-                "title": "特別展 源氏物語 王朝のかがやき",
+                "title": "迚ｹ蛻･螻� 貅先ｰ冗黄隱� 邇区悃縺ｮ縺九′繧�″",
                 "start": "2026-10-06",
                 "end": "2026-11-29",
                 "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
@@ -498,7 +518,7 @@ jobs:
               {
                 "id": "f317fdcac0c2d571",
                 "museumId": "kyohaku",
-                "title": "特別展 大狩野派〈第1部 室町～桃山編〉",
+                "title": "迚ｹ蛻･螻� 螟ｧ迢ｩ驥取ｴｾ縲育ｬｬ1驛ｨ 螳､逕ｺ�樊｡�ｱｱ邱ｨ縲�",
                 "start": "2027-04-20",
                 "end": "2027-05-30",
                 "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
@@ -507,7 +527,7 @@ jobs:
               {
                 "id": "a36e257e2a750b71",
                 "museumId": "kyohaku",
-                "title": "特別展 大狩野派〈第2部 江戸～明治編〉",
+                "title": "迚ｹ蛻･螻� 螟ｧ迢ｩ驥取ｴｾ縲育ｬｬ2驛ｨ 豎滓虻�樊�豐ｻ邱ｨ縲�",
                 "start": "2027-06-08",
                 "end": "2027-07-19",
                 "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
@@ -516,7 +536,7 @@ jobs:
               {
                 "id": "d8f54e8cc4b55712",
                 "museumId": "narahaku",
-                "title": "第78回 正倉院展",
+                "title": "隨ｬ78蝗� 豁｣蛟蛾劼螻�",
                 "start": "2026-10-24",
                 "end": "2026-11-09",
                 "url": "https://shosoin-ten.jp/",
@@ -525,7 +545,7 @@ jobs:
               {
                 "id": "894d62a6dc68f305",
                 "museumId": "kyocera",
-                "title": "浮世絵スーパークリエイター 歌川国芳展",
+                "title": "豬ｮ荳也ｵｵ繧ｹ繝ｼ繝代�繧ｯ繝ｪ繧ｨ繧､繧ｿ繝ｼ 豁悟ｷ晏嵜闃ｳ螻�",
                 "start": "2026-07-18",
                 "end": "2026-09-23",
                 "url": "https://kyotocity-kyocera.museum/exhibition",
@@ -534,7 +554,7 @@ jobs:
               {
                 "id": "e35365db6b1deb1f",
                 "museumId": "kyocera",
-                "title": "テート美術館 ― YBA & BEYOND 世界を変えた90s英国アート",
+                "title": "繝��繝育ｾ手｡馴､ｨ 窶� YBA & BEYOND 荳也阜繧貞､峨∴縺�90s闍ｱ蝗ｽ繧｢繝ｼ繝�",
                 "start": "2026-06-03",
                 "end": "2026-09-06",
                 "url": "https://kyotocity-kyocera.museum/exhibition",
@@ -543,7 +563,7 @@ jobs:
               {
                 "id": "4defb124a5afa566",
                 "museumId": "nmao",
-                "title": "笹本晃 ラボラトリー",
+                "title": "隨ｹ譛ｬ譎� 繝ｩ繝懊Λ繝医Μ繝ｼ",
                 "start": "2026-07-19",
                 "end": "2026-11-03",
                 "url": "https://www.nmao.go.jp/exhibition/current_exhibition/",
@@ -552,7 +572,7 @@ jobs:
               {
                 "id": "3b2b2b1608a44107",
                 "museumId": "nakka",
-                "title": "スイス絵画の異才 カール・ヴァルザー",
+                "title": "繧ｹ繧､繧ｹ邨ｵ逕ｻ縺ｮ逡ｰ謇� 繧ｫ繝ｼ繝ｫ繝ｻ繝ｴ繧｡繝ｫ繧ｶ繝ｼ",
                 "start": "2026-07-04",
                 "end": "2026-09-27",
                 "url": "https://nakka-art.jp/exhibition/held/",
@@ -561,7 +581,7 @@ jobs:
               {
                 "id": "a39ac0af10e95713",
                 "museumId": "nakka",
-                "title": "フェルメール《真珠の耳飾りの少女》展",
+                "title": "繝輔ぉ繝ｫ繝｡繝ｼ繝ｫ縲顔悄迴�縺ｮ閠ｳ鬟ｾ繧翫�蟆大･ｳ縲句ｱ�",
                 "start": "2026-08-21",
                 "end": "2026-09-27",
                 "url": "https://nakka-art.jp/exhibition/held/",
@@ -570,7 +590,7 @@ jobs:
               {
                 "id": "826d083b3793c866",
                 "museumId": "nakka",
-                "title": "NHK日曜美術館50年展",
+                "title": "NHK譌･譖懃ｾ手｡馴､ｨ50蟷ｴ螻�",
                 "start": "2026-10-10",
                 "end": "2026-12-20",
                 "url": "https://nakka-art.jp/exhibition/held/",
@@ -579,7 +599,7 @@ jobs:
               {
                 "id": "f7873c442e709c24",
                 "museumId": "nakka",
-                "title": "大英博物館日本美術コレクション 百花繚乱〜海を越えた江戸絵画",
+                "title": "螟ｧ闍ｱ蜊夂黄鬢ｨ譌･譛ｬ鄒手｡薙さ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ 逋ｾ闃ｱ郢壻ｹｱ縲懈ｵｷ繧定ｶ翫∴縺滓ｱ滓虻邨ｵ逕ｻ",
                 "start": "2026-10-31",
                 "end": "2027-01-31",
                 "url": "https://nakka-art.jp/exhibition/held/",
@@ -588,7 +608,7 @@ jobs:
               {
                 "id": "ea9da9675bc35563",
                 "museumId": "osakaart",
-                "title": "開館90周年記念特別展 水滸伝",
+                "title": "髢矩､ｨ90蜻ｨ蟷ｴ險伜ｿｵ迚ｹ蛻･螻� 豌ｴ貊ｸ莨�",
                 "start": "2026-07-11",
                 "end": "2026-09-06",
                 "url": "https://www.osaka-art-museum.jp/special_exhibition/8301",
@@ -597,7 +617,7 @@ jobs:
               {
                 "id": "242a76228aff74c1",
                 "museumId": "osakaart",
-                "title": "躍動する明代の書－台北・何創時コレクションの至宝",
+                "title": "霄榊虚縺吶ｋ譏惹ｻ｣縺ｮ譖ｸ�榊床蛹励�菴募卸譎ゅさ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮ閾ｳ螳�",
                 "start": "2026-10-09",
                 "end": "2026-12-20",
                 "url": "https://www.osaka-art-museum.jp/",
@@ -606,7 +626,7 @@ jobs:
               {
                 "id": "e26b95490c790430",
                 "museumId": "osakaart",
-                "title": "円山応挙 リアルの先へ 空間革命",
+                "title": "蜀�ｱｱ蠢懈嫌 繝ｪ繧｢繝ｫ縺ｮ蜈医∈ 遨ｺ髢馴擠蜻ｽ",
                 "start": "2027-02-06",
                 "end": "2027-04-04",
                 "url": "https://www.osaka-art-museum.jp/",
@@ -615,7 +635,7 @@ jobs:
               {
                 "id": "ba260a45643f9574",
                 "museumId": "hyogo",
-                "title": "県立ミュージアムズ連携企画 ミュージアムのミステリー",
+                "title": "逵檎ｫ九Α繝･繝ｼ繧ｸ繧｢繝�繧ｺ騾｣謳ｺ莨∫判 繝溘Η繝ｼ繧ｸ繧｢繝�縺ｮ繝溘せ繝�Μ繝ｼ",
                 "start": "2026-06-06",
                 "end": "2026-09-13",
                 "url": "https://www.artm.pref.hyogo.jp/exhibition/",
@@ -624,7 +644,7 @@ jobs:
               {
                 "id": "2f76a934e42d567c",
                 "museumId": "hyogo",
-                "title": "松方幸次郎 × 山村德太郎 蒐集のパッション ―ロダンを日本へ、具体を世界へ",
+                "title": "譚ｾ譁ｹ蟷ｸ谺｡驛� ﾃ� 螻ｱ譚大ｾｷ螟ｪ驛� 闥宣寔縺ｮ繝代ャ繧ｷ繝ｧ繝ｳ 窶輔Ο繝繝ｳ繧呈律譛ｬ縺ｸ縲∝�菴薙ｒ荳也阜縺ｸ",
                 "start": "2026-10-10",
                 "end": "2026-12-27",
                 "url": "https://www.artm.pref.hyogo.jp/exhibition/",
@@ -633,7 +653,7 @@ jobs:
               {
                 "id": "af5d25006c47cc01",
                 "museumId": "hyogo",
-                "title": "新！浮世絵展―幕末明治の天才絵師たち",
+                "title": "譁ｰ�∵ｵｮ荳也ｵｵ螻補募ｹ墓忰譏取ｲｻ縺ｮ螟ｩ謇咲ｵｵ蟶ｫ縺溘■",
                 "start": "2027-03-20",
                 "end": "2027-05-23",
                 "url": "https://www.artm.pref.hyogo.jp/exhibition/",
@@ -642,7 +662,7 @@ jobs:
               {
                 "id": "7c81190f26931131",
                 "museumId": "momak",
-                "title": "フォンタネージ—イタリアの光・心の風景",
+                "title": "繝輔か繝ｳ繧ｿ繝阪�繧ｸ窶斐う繧ｿ繝ｪ繧｢縺ｮ蜈峨�蠢��鬚ｨ譎ｯ",
                 "start": "2026-07-18",
                 "end": "2026-10-04",
                 "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
@@ -651,7 +671,7 @@ jobs:
               {
                 "id": "d09a1ba19b73ed8c",
                 "museumId": "momak",
-                "title": "ジュエリーは、誰を夢みる",
+                "title": "繧ｸ繝･繧ｨ繝ｪ繝ｼ縺ｯ縲∬ｪｰ繧貞､｢縺ｿ繧�",
                 "start": "2026-10-24",
                 "end": "2027-01-17",
                 "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
@@ -660,7 +680,7 @@ jobs:
               {
                 "id": "78395bc937b7cc7e",
                 "museumId": "bunpaku",
-                "title": "マリメッコ展 模様のちから",
+                "title": "繝槭Μ繝｡繝�さ螻� 讓｡讒倥�縺｡縺九ｉ",
                 "start": "2026-07-04",
                 "end": "2026-09-06",
                 "url": "https://www.bunpaku.or.jp/exhi_special_post/20260704-0906/",
@@ -669,7 +689,7 @@ jobs:
               {
                 "id": "dea61e9d78ee46cb",
                 "museumId": "bunpaku",
-                "title": "寛永 太平がはぐくむ美",
+                "title": "蟇帶ｰｸ 螟ｪ蟷ｳ縺後�縺舌￥繧鄒�",
                 "start": "2026-09-19",
                 "end": "2026-11-15",
                 "url": "https://www.bunpaku.or.jp/exhi_special_post/20260919-1115/",
@@ -678,7 +698,7 @@ jobs:
               {
                 "id": "ccc1f2b2db1f7441",
                 "museumId": "osakahistory",
-                "title": "NHK大河ドラマ特別展「豊臣兄弟！」",
+                "title": "NHK螟ｧ豐ｳ繝峨Λ繝樒音蛻･螻輔瑚ｱ願�蜈�ｼ滂ｼ√�",
                 "start": "2026-07-08",
                 "end": "2026-08-31",
                 "url": "https://www.osakamushis.jp/news/2026/toyotomikyodai.html",
@@ -687,7 +707,7 @@ jobs:
               {
                 "id": "0782204f79cc2023",
                 "museumId": "harukas",
-                "title": "ゴッホの跳ね橋と印象派の画家たち ヴァルラフ＝リヒャルツ美術館所蔵",
+                "title": "繧ｴ繝��縺ｮ霍ｳ縺ｭ讖九→蜊ｰ雎｡豢ｾ縺ｮ逕ｻ螳ｶ縺溘■ 繝ｴ繧｡繝ｫ繝ｩ繝包ｼ昴Μ繝偵Ε繝ｫ繝�ｾ手｡馴､ｨ謇阡ｵ",
                 "start": "2026-07-04",
                 "end": "2026-09-09",
                 "url": "https://www.aham.jp/exhibition/future/",
@@ -696,7 +716,7 @@ jobs:
               {
                 "id": "fc80471014318dd0",
                 "museumId": "harukas",
-                "title": "アンドリュー・ワイエス展",
+                "title": "繧｢繝ｳ繝峨Μ繝･繝ｼ繝ｻ繝ｯ繧､繧ｨ繧ｹ螻�",
                 "start": "2026-10-03",
                 "end": "2026-12-06",
                 "url": "https://www.aham.jp/exhibition/future/",
@@ -705,7 +725,7 @@ jobs:
               {
                 "id": "8786eb9a9fe0c874",
                 "museumId": "kobe",
-                "title": "ゴールドマン コレクション 河鍋暁斎の世界",
+                "title": "繧ｴ繝ｼ繝ｫ繝峨�繝ｳ 繧ｳ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ 豐ｳ骰区噤譁弱�荳也阜",
                 "start": "2026-07-11",
                 "end": "2026-09-23",
                 "url": "https://www.kobecitymuseum.jp/exhibition/detail?exhibition=396",
@@ -714,7 +734,7 @@ jobs:
               {
                 "id": "3af8cae45d49a427",
                 "museumId": "shiga",
-                "title": "丸木スマ展 73歳からのアーティスト",
+                "title": "荳ｸ譛ｨ繧ｹ繝槫ｱ� 73豁ｳ縺九ｉ縺ｮ繧｢繝ｼ繝�ぅ繧ｹ繝�",
                 "start": "2026-09-11",
                 "end": "2026-11-23",
                 "url": "https://www.shigamuseum.jp/exhibitions/",
@@ -723,7 +743,7 @@ jobs:
               {
                 "id": "6bdcc685244c95fa",
                 "museumId": "shiga",
-                "title": "佐川晃司展（仮称）",
+                "title": "菴仙ｷ晄刄蜿ｸ螻包ｼ井ｻｮ遘ｰ��",
                 "start": "2027-01-15",
                 "end": "2027-03-22",
                 "url": "https://www.shigamuseum.jp/exhibitions/",
@@ -732,7 +752,7 @@ jobs:
               {
                 "id": "003cbb53bb1294c4",
                 "museumId": "momaw",
-                "title": "もしも“美術”がなかったら",
+                "title": "繧ゅ＠繧や懃ｾ手｡凪昴′縺ｪ縺九▲縺溘ｉ",
                 "start": "2026-07-11",
                 "end": "2026-09-27",
                 "url": "https://www.momaw.jp/information/exhibitions-2026/",
@@ -741,7 +761,7 @@ jobs:
               {
                 "id": "a747542539585cec",
                 "museumId": "miho",
-                "title": "百済寺と近江の仏教美術―百済寺秘仏公開によせて―",
+                "title": "逋ｾ貂亥ｯｺ縺ｨ霑第ｱ溘�莉乗蕗鄒手｡凪慕卆貂亥ｯｺ遘倅ｻ丞�髢九↓繧医○縺ｦ窶�",
                 "start": "2026-09-26",
                 "end": "2026-12-06",
                 "url": "https://www.miho.jp/exhibition/autumn2026/",
@@ -750,7 +770,7 @@ jobs:
               {
                 "id": "e300acffed8d1351",
                 "museumId": "sagawa",
-                "title": "魔法の美術館Ⅳ",
+                "title": "鬲疲ｳ輔�鄒手｡馴､ｨ竇｣",
                 "start": "2026-07-01",
                 "end": "2026-09-06",
                 "url": "https://www.sagawa-artmuseum.or.jp/",
@@ -759,7 +779,7 @@ jobs:
               {
                 "id": "d8243a49e08c54c5",
                 "museumId": "omnh",
-                "title": "大絶滅展―生命史のビッグファイブ",
+                "title": "螟ｧ邨ｶ貊�ｱ補慕函蜻ｽ蜿ｲ縺ｮ繝薙ャ繧ｰ繝輔ぃ繧､繝�",
                 "start": "2026-07-17",
                 "end": "2026-10-12",
                 "url": "https://omnh.jp/archives/13919",
@@ -768,7 +788,7 @@ jobs:
               {
                 "id": "14173c3d3c23a87e",
                 "museumId": "minpaku",
-                "title": "特別展 沙流川に生きる ――サルンクㇽの近代",
+                "title": "迚ｹ蛻･螻� 豐呎ｵ∝ｷ昴↓逕溘″繧� 窶補輔し繝ｫ繝ｳ繧ｯ繚ｽ縺ｮ霑台ｻ｣",
                 "start": "2026-09-25",
                 "end": "2026-12-15",
                 "url": "https://www.minpaku.ac.jp/ai1ec_event/69685",
@@ -777,14 +797,14 @@ jobs:
               {
                 "id": "64d07ff72f7f56ef",
                 "museumId": "minpaku",
-                "title": "企画展 トレス海峡（ゼナドスケス）と日本――大島襄二写真コレクションから見た交流と歴史",
+                "title": "莨∫判螻� 繝医Ξ繧ｹ豬ｷ蟲｡�医ぞ繝翫ラ繧ｹ繧ｱ繧ｹ�峨→譌･譛ｬ窶補募､ｧ蟲ｶ隘�ｺ悟�逵溘さ繝ｬ繧ｯ繧ｷ繝ｧ繝ｳ縺九ｉ隕九◆莠､豬√→豁ｴ蜿ｲ",
                 "start": "2026-09-10",
                 "end": "2026-12-15",
                 "url": "https://www.minpaku.ac.jp/ai1ec_event/69812",
                 "verifiedAt": "2026-09-02"
               }
             ],
-            "note": "公式確認済みの一部の特別展・企画展。網羅一覧ではありません。"
+            "note": "蜈ｬ蠑冗｢ｺ隱肴ｸ医∩縺ｮ荳驛ｨ縺ｮ迚ｹ蛻･螻輔�莨∫判螻輔らｶｲ鄒�ｸ隕ｧ縺ｧ縺ｯ縺ゅｊ縺ｾ縺帙ｓ縲�"
           }
           MUSEUM_FILE_END
           cat > _museum/test_run.py <<'MUSEUM_FILE_END'
@@ -818,7 +838,336 @@ jobs:
               def test_rejects_mass_addition(self):
                   with self.assertRaises(ValueError):publication(self.old,{'kyohaku':[self.entry]*51},{'kyohaku'},'2026-09-03')
               def test_seed_is_valid(self):validate(self.old)
+          class ReviewedReportTests(unittest.TestCase):
+              def setUp(self):
+                  self.seed=json.loads(Path('seed.json').read_text())
+                  self.report=json.loads(Path('reviewed-report.json').read_text())
+                  self.results={r['museumId']:r['entries'] for r in self.report}
+              def test_reviewed_report_has_no_legacy_duplicates(self):
+                  out=publication(self.seed,self.results,set(self.results),'2026-09-02')
+                  self.assertEqual(len(out['exhibitions']),46)
+                  self.assertTrue({e['id'] for e in self.seed['exhibitions']} <= {e['id'] for e in out['exhibitions']})
+                  self.assertEqual([e for e in out['exhibitions'] if e['museumId']=='minpaku'],[e for e in self.seed['exhibitions'] if e['museumId']=='minpaku'])
+                  again=publication(out,self.results,set(self.results),'2026-09-03')
+                  self.assertEqual(len(again['exhibitions']),46)
+              def test_titles_exclude_location_labels(self):
+                  out=publication(self.seed,self.results,set(self.results),'2026-09-02')
+                  for e in out['exhibitions']:
+                      self.assertNotIn('莨壼�ｴ[',e['title'])
+                      self.assertNotIn('髫主ｱ慕､ｺ螳､',e['title'])
+              def test_future_title_change_matches_exact_event_url(self):
+                  out=publication(self.seed,self.results,set(self.results),'2026-09-02')
+                  e=copy.deepcopy(self.results['kyocera'][0]);e['title']='譁ｰ縺励＞豁｣蠑丞錐遘ｰ';e['id']='new-title-id'
+                  again=publication(out,{'kyocera':[e]},{'kyocera'},'2026-09-03')
+                  self.assertEqual(len(again['exhibitions']),len(out['exhibitions']))
+              def test_multipart_same_url_stays_separate(self):
+                  out=publication(self.seed,self.results,{'kyohaku'},'2026-09-02')
+                  parts=[e for e in out['exhibitions'] if '/2027_kano/' in e['url']]
+                  self.assertEqual(len(parts),2)
+                  self.assertNotEqual(parts[0]['start'],parts[1]['start'])
+
           if __name__=='__main__':unittest.main()
+          MUSEUM_FILE_END
+          cat > _museum/reviewed-report.json <<'MUSEUM_FILE_END'
+          [
+            {
+              "museumId": "kyohaku",
+              "officialUrl": "https://www.kyohaku.go.jp/jp/exhibitions/",
+              "status": "obtained",
+              "autoPublish": false,
+              "count": 3,
+              "entries": [
+                {
+                  "id": "ca18d7b96349e79e",
+                  "museumId": "kyohaku",
+                  "title": "迚ｹ蛻･螻� 貅先ｰ冗黄隱� 邇区悃縺ｮ縺九′繧�″",
+                  "start": "2026-10-06",
+                  "end": "2026-11-29",
+                  "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2026_genji/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "0507be3857aaf784",
+                  "museumId": "kyohaku",
+                  "title": "莠ｬ驛ｽ蝗ｽ遶句忽迚ｩ鬢ｨ髢矩､ｨ130蜻ｨ蟷ｴ險伜ｿｵ 迚ｹ蛻･螻� 螟ｧ迢ｩ驥取ｴｾ <隨ｬ1驛ｨ 螳､逕ｺ~譯�ｱｱ邱ｨ>",
+                  "start": "2027-04-20",
+                  "end": "2027-05-30",
+                  "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2027_kano/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "3de57139fcc39d78",
+                  "museumId": "kyohaku",
+                  "title": "莠ｬ驛ｽ蝗ｽ遶句忽迚ｩ鬢ｨ髢矩､ｨ130蜻ｨ蟷ｴ險伜ｿｵ 迚ｹ蛻･螻� 螟ｧ迢ｩ驥取ｴｾ <隨ｬ2驛ｨ 豎滓虻~譏取ｲｻ邱ｨ>",
+                  "start": "2027-06-08",
+                  "end": "2027-07-19",
+                  "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2027_kano/",
+                  "verifiedAt": "2026-09-02"
+                }
+              ]
+            },
+            {
+              "museumId": "kyocera",
+              "officialUrl": "https://kyotocity-kyocera.museum/exhibition",
+              "status": "obtained",
+              "autoPublish": false,
+              "count": 11,
+              "entries": [
+                {
+                  "id": "62902e60b8845143",
+                  "museumId": "kyocera",
+                  "title": "豬ｮ荳也ｵｵ繧ｹ繝ｼ繝代�繧ｯ繝ｪ繧ｨ繧､繧ｿ繝ｼ 豁悟ｷ晏嵜闃ｳ螻� 莨壼�ｴ[ 譛ｬ鬢ｨ 蛹怜屓蟒�1髫� ]",
+                  "start": "2026-07-18",
+                  "end": "2026-09-23",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20260718-20260923",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "137d73fe3d195ac1",
+                  "museumId": "kyocera",
+                  "title": "繝��繝育ｾ手｡馴､ｨ 窶� YBA & BEYOND 荳也阜繧貞､峨∴縺�90s闍ｱ蝗ｽ繧｢繝ｼ繝� 莨壼�ｴ[ 譁ｰ鬢ｨ 譚ｱ螻ｱ繧ｭ繝･繝ｼ繝� ]",
+                  "start": "2026-06-03",
+                  "end": "2026-09-06",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20260603-20260906",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "b9349995ff890242",
+                  "museumId": "kyocera",
+                  "title": "譚ｾ蟒ｶ邱丞昇:螢� 莨壼�ｴ[ 繧ｶ繝ｻ繝医Λ繧､繧｢繝ｳ繧ｰ繝ｫ ]",
+                  "start": "2026-09-12",
+                  "end": "2026-12-20",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20260912-20261220",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "6addd47068c1f7c1",
+                  "museumId": "kyocera",
+                  "title": "逕溯ｪ�140蟷ｴ險伜ｿｵ 譟鍋ｹ泌ｮｶ 螻ｱ鮖ｿ貂�庄笏螳咏ｿ斐�繧､繝槭ず繝阪�繧ｷ繝ｧ繝ｳ 莨壼�ｴ[ 譛ｬ鬢ｨ 蜊怜屓蟒�1髫� ]",
+                  "start": "2026-09-19",
+                  "end": "2026-12-20",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20260919-20261220",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "5f67fd983518d75a",
+                  "museumId": "kyocera",
+                  "title": "遖�→繧ｸ繝悶Μ 莨壼�ｴ[ 譁ｰ鬢ｨ 譚ｱ螻ｱ繧ｭ繝･繝ｼ繝� ]",
+                  "start": "2026-10-03",
+                  "end": "2026-12-06",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20261003-20261206",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "4558f1e45e6a16a0",
+                  "museumId": "kyocera",
+                  "title": "繧ｹ繧ｿ繧ｸ繧ｪ繧ｸ繝悶Μ莨∫判蛻ｶ菴懊守區髫�縺輔ｓ縺ｮ遖�丈ｺｬ驛ｽ螻� 莨壼�ｴ[ 譁ｰ鬢ｨ 譚ｱ螻ｱ繧ｭ繝･繝ｼ繝� ]",
+                  "start": "2026-12-17",
+                  "end": "2027-01-11",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20261217-20270111",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "70872ce1d5efbaeb",
+                  "museumId": "kyocera",
+                  "title": "隨ｬ119蝗樊律螻穂ｺｬ驛ｽ螻� 莨壼�ｴ[ 譛ｬ鬢ｨ 蛹怜屓蟒�1髫� | 譛ｬ鬢ｨ 蛹怜屓蟒�2髫� | 譛ｬ鬢ｨ 蜊怜屓蟒�2髫� | 蜈峨�蠎�俣 ]",
+                  "start": "2026-12-19",
+                  "end": "2027-01-16",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20261219-20270116",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "decbe2b5e36817d2",
+                  "museumId": "kyocera",
+                  "title": "阯､驥手｣慕ｾ主ｭ� 莨壼�ｴ[ 繧ｶ繝ｻ繝医Λ繧､繧｢繝ｳ繧ｰ繝ｫ ]",
+                  "start": "2027-01-15",
+                  "end": "2027-04-18",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20270115-20270418",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "cccd8130f864eb13",
+                  "museumId": "kyocera",
+                  "title": "諤晁�☆繧句ｽｫ蛻ｻ螳ｶ 繝ｩ繝輔ぃ繧ｨ繝ｫ繝ｻ繧ｶ繝ｫ繧ｫ縺ｨ蝣蜀�ｭ｣蜥� 窶募ｹｾ菴募ｭｦ縺ｨ繝｢繝繝九ユ繧｣繧偵ａ縺舌ｋ蟇ｾ隧ｱ(莉ｮ遘ｰ) 莨壼�ｴ[ 譁ｰ鬢ｨ 譚ｱ螻ｱ繧ｭ繝･繝ｼ繝� ]",
+                  "start": "2027-02-06",
+                  "end": "2027-05-05",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20270206-20270505",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "1dd3d180b0921f9f",
+                  "museumId": "kyocera",
+                  "title": "繧ｮ繝ｫ繝舌�繝�&繧ｸ繝ｧ繝ｼ繧ｸ螻� 莨壼�ｴ[ 譁ｰ鬢ｨ 譚ｱ螻ｱ繧ｭ繝･繝ｼ繝� ]",
+                  "start": "2027-05-26",
+                  "end": "2027-08-29",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20270526-20270829",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "62532064ed2558b6",
+                  "museumId": "kyocera",
+                  "title": "逕溯ｪ�150蟷ｴ 譛ｨ蟲ｶ讚ｻ隹ｷ 莨壼�ｴ[ 譛ｬ鬢ｨ 蜊怜屓蟒�1髫� ]",
+                  "start": "2027-10-02",
+                  "end": "2027-12-12",
+                  "url": "https://kyotocity-kyocera.museum/exhibition/20271002-20271212",
+                  "verifiedAt": "2026-09-02"
+                }
+              ]
+            },
+            {
+              "museumId": "nakka",
+              "officialUrl": "https://nakka-art.jp/exhibition/held/",
+              "status": "obtained",
+              "autoPublish": false,
+              "count": 6,
+              "entries": [
+                {
+                  "id": "3b2b2b1608a44107",
+                  "museumId": "nakka",
+                  "title": "繧ｹ繧､繧ｹ邨ｵ逕ｻ縺ｮ逡ｰ謇� 繧ｫ繝ｼ繝ｫ繝ｻ繝ｴ繧｡繝ｫ繧ｶ繝ｼ",
+                  "start": "2026-07-04",
+                  "end": "2026-09-27",
+                  "url": "https://nakka-art.jp/exhibition-post/karlwalser-2026/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "608160a54230f0cb",
+                  "museumId": "nakka",
+                  "title": "繝輔ぉ繝ｫ繝｡繝ｼ繝ｫ縲顔悄迴�縺ｮ閠ｳ鬟ｾ繧翫�蟆大･ｳ縲句ｱ� 17荳也ｴ繧ｪ繝ｩ繝ｳ繝邨ｵ逕ｻ縺ｮ蜷榊刀縲∝･�ｷ｡縺ｮ蜀肴擂譌･",
+                  "start": "2026-08-21",
+                  "end": "2026-09-27",
+                  "url": "https://nakka-art.jp/exhibition-post/vermeer2026/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "826d083b3793c866",
+                  "museumId": "nakka",
+                  "title": "NHK譌･譖懃ｾ手｡馴､ｨ50蟷ｴ螻�",
+                  "start": "2026-10-10",
+                  "end": "2026-12-20",
+                  "url": "https://nakka-art.jp/exhibition-post/nichibiten50/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "6792b4e8d6dca13c",
+                  "museumId": "nakka",
+                  "title": "讖� 闡画怦",
+                  "start": "2026-11-14",
+                  "end": "2026-12-13",
+                  "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir13/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "b932b735afdd4994",
+                  "museumId": "nakka",
+                  "title": "霑ｫ 驩�ｹｳ",
+                  "start": "2026-12-19",
+                  "end": "2027-01-17",
+                  "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir14/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "0b807c9d8d5894f4",
+                  "museumId": "nakka",
+                  "title": "荵ｾ 逵溯｣募ｭ�",
+                  "start": "2027-01-23",
+                  "end": "2027-02-21",
+                  "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir15/",
+                  "verifiedAt": "2026-09-02"
+                }
+              ]
+            },
+            {
+              "museumId": "osakaart",
+              "officialUrl": "https://www.osaka-art-museum.jp/",
+              "status": "obtained",
+              "autoPublish": false,
+              "count": 2,
+              "entries": [
+                {
+                  "id": "9dfc74346c9bdaa0",
+                  "museumId": "osakaart",
+                  "title": "螟ｧ髦ｪ蟶らｫ狗ｾ手｡馴､ｨ髢矩､ｨ90蜻ｨ蟷ｴ險伜ｿｵ迚ｹ蛻･螻� 豌ｴ貊ｸ莨� 迚ｹ蛻･螻�",
+                  "start": "2026-07-11",
+                  "end": "2026-09-06",
+                  "url": "https://www.osaka-art-museum.jp/special_exhibition/8301",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "a649ba0f5eac4c7d",
+                  "museumId": "osakaart",
+                  "title": "蜀�ｱｱ蠢懈嫌 繝ｪ繧｢繝ｫ縺ｮ蜈医∈ 遨ｺ髢馴擠蜻ｽ 迚ｹ蛻･螻�",
+                  "start": "2027-02-06",
+                  "end": "2027-04-04",
+                  "url": "https://www.osaka-art-museum.jp/special_exhibition/10344",
+                  "verifiedAt": "2026-09-02"
+                }
+              ]
+            },
+            {
+              "museumId": "bunpaku",
+              "officialUrl": "https://www.bunpaku.or.jp/",
+              "status": "obtained",
+              "autoPublish": false,
+              "count": 2,
+              "entries": [
+                {
+                  "id": "ef420067f429247e",
+                  "museumId": "bunpaku",
+                  "title": "繝槭Μ繝｡繝�さ螻� 讓｡讒倥�縺｡縺九ｉ Marimekko: Art of Printmaking -Beauty, Dream, Love (譌･) 4繝ｻ3髫主ｱ慕､ｺ螳､",
+                  "start": "2026-07-04",
+                  "end": "2026-09-06",
+                  "url": "https://www.bunpaku.or.jp/exhi_special_post/20260704-0906/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "25126c2509470144",
+                  "museumId": "bunpaku",
+                  "title": "蟇帶ｰｸ陦悟ｹｸ蝗帷卆蟷ｴ逾ｭ髢句ぎ險伜ｿｵ 迚ｹ蛻･螻輔悟ｯ帶ｰｸ 螟ｪ蟷ｳ縺後�縺舌￥繧鄒弱� (譌･) 4繝ｻ3髫主ｱ慕､ｺ螳､",
+                  "start": "2026-09-19",
+                  "end": "2026-11-15",
+                  "url": "https://www.bunpaku.or.jp/exhi_special_post/20260919-1115/",
+                  "verifiedAt": "2026-09-02"
+                }
+              ]
+            },
+            {
+              "museumId": "shiga",
+              "officialUrl": "https://www.shigamuseum.jp/exhibitions/",
+              "status": "obtained",
+              "autoPublish": false,
+              "count": 3,
+              "entries": [
+                {
+                  "id": "3af8cae45d49a427",
+                  "museumId": "shiga",
+                  "title": "荳ｸ譛ｨ繧ｹ繝槫ｱ� 73豁ｳ縺九ｉ縺ｮ繧｢繝ｼ繝�ぅ繧ｹ繝�",
+                  "start": "2026-09-11",
+                  "end": "2026-11-23",
+                  "url": "https://www.shigamuseum.jp/exhibitions/12995/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "ef2e4d15dc7fee29",
+                  "museumId": "shiga",
+                  "title": "驥第ｰ丞ｾｹ蟷ｳ 辣吶→髴ｧ 荳ｭ螻ｱ驕捺沛蜴溷ｮｿ",
+                  "start": "2026-10-03",
+                  "end": "2026-12-13",
+                  "url": "https://www.shigamuseum.jp/exhibitions/14001/",
+                  "verifiedAt": "2026-09-02"
+                },
+                {
+                  "id": "b5a52cdcdf11cdae",
+                  "museumId": "shiga",
+                  "title": "菴仙ｷ晄刄蜿ｸ螻�",
+                  "start": "2027-01-15",
+                  "end": "2027-03-22",
+                  "url": "https://www.shigamuseum.jp/exhibitions/12978/",
+                  "verifiedAt": "2026-09-02"
+                }
+              ]
+            }
+          ]
           MUSEUM_FILE_END
       - name: Test preservation and validation
         working-directory: _museum
