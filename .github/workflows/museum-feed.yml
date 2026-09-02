@@ -1,0 +1,863 @@
+name: Museum feed
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/museum-feed.yml']
+  schedule:
+    - cron: '17 21 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: museum-feed
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Empty until adapters are reviewed. Failed/unreviewed museums keep saved data.
+      AUTO_PUBLISH_MUSEUMS: ${{ vars.AUTO_PUBLISH_MUSEUMS }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare self-contained collector
+        shell: bash
+        run: |
+          mkdir -p _museum
+          cat > _museum/collector.py <<'MUSEUM_FILE_END'
+          """Conservative official-site extraction. Writes a review candidate, never edits input.
+          Run: python -m collector.collect --input app/src/main/assets/exhibitions.json --output build/candidate.json
+          Live adapters require review against current HTML before enabling automated publication.
+          """
+          from html.parser import HTMLParser
+          from datetime import date, datetime
+          from zoneinfo import ZoneInfo
+          from urllib.request import Request, build_opener, HTTPRedirectHandler
+          from urllib.parse import urljoin, urlsplit
+          from pathlib import Path
+          import argparse, copy, hashlib, json, re, time, unicodedata
+
+          # Only explicit years establish a date range. Never guess the year from today's date.
+          DATE = r'(?:(?P<{p}y>20\d{{2}})\s*[年./-]\s*)?(?P<{p}m>\d{{1,2}})\s*[月./-]\s*(?P<{p}d>\d{{1,2}})\s*日?'
+          RANGE = re.compile(DATE.format(p='a') + r'\s*(?:\([^)]*\))?\s*(?:[A-Za-z]{3}\.?\s*)?[～〜~–—－-]\s*' + DATE.format(p='b'))
+
+          def date_ranges(text):
+              text=unicodedata.normalize('NFKC', text)
+              result=[]
+              for m in RANGE.finditer(text):
+                  if not m['ay']:continue
+                  try:
+                      start=date(int(m['ay']),int(m['am']),int(m['ad']))
+                      end_year=int(m['by']) if m['by'] else start.year+(int(m['bm'])<start.month)
+                      end=date(end_year,int(m['bm']),int(m['bd']))
+                      if start<=end and (end-start).days<730:result.append((start.isoformat(),end.isoformat()))
+                  except ValueError:pass
+              return result
+
+          class Node:
+              def __init__(self,tag='',attrs=None,parent=None):
+                  self.tag=tag;self.attrs=dict(attrs or []);self.parent=parent;self.children=[]
+              def text(self):
+                  return ' '.join(c if isinstance(c,str) else c.text() for c in self.children if isinstance(c,str) or c.tag not in ('script','style','nav','header','footer'))
+              def walk(self):
+                  yield self
+                  for c in self.children:
+                      if isinstance(c,Node):yield from c.walk()
+
+          class Tree(HTMLParser):
+              VOID={'area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'}
+              def __init__(self,html):
+                  super().__init__(convert_charrefs=True);self.root=Node('root');self.current=self.root;self.feed(html)
+              def handle_starttag(self,tag,attrs):
+                  n=Node(tag,attrs,self.current);self.current.children.append(n)
+                  if tag not in self.VOID:self.current=n
+              def handle_startendtag(self,tag,attrs):
+                  self.handle_starttag(tag,attrs)
+                  if tag not in self.VOID:self.handle_endtag(tag)
+              def handle_endtag(self,tag):
+                  n=self.current
+                  while n.parent:
+                      if n.tag==tag:self.current=n.parent;break
+                      n=n.parent
+              def handle_data(self,text):self.current.children.append(text)
+
+          def extract(html,config,checked):
+              tree=Tree(html);out={};origin=urlsplit(config['url'])
+              for a in tree.root.walk():
+                  if a.tag!='a':continue
+                  url=urljoin(config['url'],a.attrs.get('href',''))
+                  parsed=urlsplit(url)
+                  if parsed.scheme!='https' or parsed.netloc!=origin.netloc or not re.search(config['path'],parsed.path):continue
+                  node=a;block=None
+                  for _ in range(4):
+                      if node is None or node.tag in ('body','html','root','main'):break
+                      t=' '.join(node.text().split());ranges=date_ranges(t)
+                      if len(ranges)>1:break
+                      if len(ranges)==1 and len(t)<650:
+                          # Do not assign one sibling exhibition's date to another link.
+                          links={n.attrs.get('href') for n in node.walk() if n.tag=='a' and re.search(config['path'],urlsplit(urljoin(config['url'],n.attrs.get('href',''))).path)}
+                          if len(links)<=1:block=(node,t,ranges[0])
+                          break
+                      node=node.parent
+                  if not block:continue
+                  node,t,(start,end)=block
+                  if config.get('require') and not re.search(config['require'],t):continue
+                  if re.search(r'コレクション|常設展|名品ギャラリー|講演会|ワークショップ|公募展',t):continue
+                  titles=[n.text() for n in node.walk() if n.tag in ('h2','h3','h4')]
+                  title=' '.join(titles) if titles else a.text()
+                  title=RANGE.sub('',unicodedata.normalize('NFKC',title))
+                  title=re.sub(r'開催中|開催予定|終了まで\d+日|チケット購入|\([^)]*\)\s*$','',title)
+                  title=' '.join(title.split()).strip(' ·|-')
+                  if len(title)<3 or title in ('詳細を見る','Read More'):continue
+                  key=hashlib.sha256(f"{config['id']}|{title}|{start}".encode()).hexdigest()[:16]
+                  out[key]=dict(id=key,museumId=config['id'],title=title,start=start,end=end,url=url,verifiedAt=checked)
+              return list(out.values())
+
+          def title_key(e):
+              return re.sub(r'\s+','',unicodedata.normalize('NFKC',e['title'])).removeprefix('特別展')
+
+          def merge(previous,results,checked):
+              out=copy.deepcopy(previous);out['updatedAt']=checked
+              for museum in out['museums']:
+                  mid=museum['id']
+                  if mid not in results:continue
+                  entries=results[mid]
+                  museum['state']='ok' if entries else 'error'
+                  if not entries:continue
+                  for e in entries:
+                      # Keep stable ids across schedule corrections; never delete missing cards.
+                      match=next((old for old in out['exhibitions'] if old['museumId']==mid and title_key(old)==title_key(e) and abs((date.fromisoformat(old['start'])-date.fromisoformat(e['start'])).days)<180),None)
+                      if match:
+                          stable=match['id'];match.update(e);match['id']=stable
+                      else:out['exhibitions'].append(e)
+              return out
+
+          class SameHostRedirect(HTTPRedirectHandler):
+              def redirect_request(self,req,fp,code,msg,headers,newurl):
+                  new=urljoin(req.full_url,newurl)
+                  if urlsplit(new).scheme!='https' or urlsplit(new).netloc!=urlsplit(req.full_url).netloc:
+                      raise ValueError('redirect outside configured official host')
+                  return super().redirect_request(req,fp,code,msg,headers,new)
+
+          def fetch(url):
+              if urlsplit(url).scheme!='https':raise ValueError('HTTPS required')
+              request=Request(url,headers={'User-Agent':'MuseumTecho/0.1 (+personal exhibition index)','Accept':'text/html'})
+              with build_opener(SameHostRedirect()).open(request,timeout=20) as r:
+                  raw=r.read(2*1024*1024+1)
+                  if len(raw)>2*1024*1024:raise ValueError('page too large')
+                  encoding=r.headers.get_content_charset() or 'utf-8'
+                  return raw.decode(encoding)
+
+          def main():
+              p=argparse.ArgumentParser();p.add_argument('--input',required=True);p.add_argument('--output',required=True);p.add_argument('--fixtures',help='Offline HTML directory: museum-id.html');args=p.parse_args()
+              if Path(args.input).resolve()==Path(args.output).resolve():p.error('output must differ from input')
+              previous=json.loads(Path(args.input).read_text(encoding='utf-8'))
+              configs=json.loads(Path(__file__).with_name('sources.json').read_text(encoding='utf-8'))
+              checked=datetime.now(ZoneInfo('Asia/Tokyo')).date().isoformat();results={};report=[]
+              for config in configs:
+                  mid=config['id']
+                  try:
+                      html=Path(args.fixtures,mid+'.html').read_text(encoding='utf-8') if args.fixtures else fetch(config['url'])
+                      entries=extract(html,config,checked);results[mid]=entries
+                      report.append(dict(museumId=mid,status='candidate' if entries else 'needs_review',count=len(entries)))
+                  except Exception as e:
+                      results[mid]=[];report.append(dict(museumId=mid,status='error',error=type(e).__name__))
+                  if not args.fixtures:time.sleep(1)
+              candidate=merge(previous,results,checked);candidate['collectionReport']=report
+              dest=Path(args.output);dest.parent.mkdir(parents=True,exist_ok=True)
+              temp=dest.with_suffix('.tmp');temp.write_text(json.dumps(candidate,ensure_ascii=False,indent=2)+'\n',encoding='utf-8');temp.replace(dest)
+              print(json.dumps(report,ensure_ascii=False))
+              return 0 if any(results.values()) else 1
+          if __name__=='__main__':raise SystemExit(main())
+          MUSEUM_FILE_END
+          cat > _museum/run.py <<'MUSEUM_FILE_END'
+          """Collect candidates; publish only explicitly reviewed adapters. No third-party packages."""
+          import copy
+          import json
+          import os
+          from datetime import datetime, date
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          from urllib.parse import urlsplit
+          from collector import fetch, extract, merge
+
+          MAX_BYTES = 2 * 1024 * 1024
+
+          def validate(feed):
+              if feed.get('schemaVersion') != 1:
+                  raise ValueError('unsupported schema')
+              date.fromisoformat(feed['updatedAt'])
+              museums = feed['museums']
+              entries = feed['exhibitions']
+              if not 1 <= len(museums) <= 300 or not 1 <= len(entries) <= 3000:
+                  raise ValueError('invalid feed size')
+              ids = [m['id'] for m in museums]
+              if len(ids) != len(set(ids)):
+                  raise ValueError('duplicate museum')
+              seen = set()
+              for e in entries:
+                  if e['id'] in seen or e['museumId'] not in ids:
+                      raise ValueError('invalid exhibition identity')
+                  seen.add(e['id'])
+                  if not isinstance(e['title'], str) or not e['title'].strip():
+                      raise ValueError('missing title')
+                  a, b = date.fromisoformat(e['start']), date.fromisoformat(e['end'])
+                  if a > b or (b-a).days >= 730:
+                      raise ValueError('invalid date range')
+              for row in museums + entries:
+                  u = urlsplit(row['url'])
+                  if u.scheme != 'https' or not u.hostname or u.username or u.password:
+                      raise ValueError('invalid official URL')
+              if len(json.dumps(feed, ensure_ascii=False).encode()) > MAX_BYTES:
+                  raise ValueError('feed too large')
+
+          def publication(previous, results, approved, checked):
+              """Failed/unapproved museums retain exact previous entries and verification dates."""
+              validate(previous)
+              good = {mid: entries for mid, entries in results.items() if mid in approved and entries}
+              if not good:
+                  return copy.deepcopy(previous)
+              for mid, entries in good.items():
+                  if len(entries) > 50 or any(e['museumId'] != mid for e in entries):
+                      raise ValueError('suspicious source result')
+              output = merge(previous, good, checked)
+              validate(output)
+              if not {e['id'] for e in previous['exhibitions']} <= {e['id'] for e in output['exhibitions']}:
+                  raise ValueError('existing exhibition removed')
+              return output
+
+          def save_json(path, value):
+              path = Path(path)
+              path.parent.mkdir(parents=True, exist_ok=True)
+              temp = path.with_suffix('.tmp')
+              temp.write_text(json.dumps(value, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+              temp.replace(path)
+
+          def main():
+              configs = json.loads(Path('sources.json').read_text())
+              approved = {s.strip() for s in os.environ.get('AUTO_PUBLISH_MUSEUMS', '').split(',') if s.strip()}
+              if approved - {c['id'] for c in configs}:
+                  raise ValueError('unknown AUTO_PUBLISH_MUSEUMS id')
+              previous = json.loads(Path('exhibitions.json').read_text())
+              validate(previous)
+              checked = datetime.now(ZoneInfo('Asia/Tokyo')).date().isoformat()
+              results, report = {}, []
+              import time
+              for config in configs:
+                  mid = config['id']
+                  try:
+                      entries = extract(fetch(config['url']), config, checked)
+                      # Do not add historical exhibitions to a current/upcoming index.
+                      entries = [e for e in entries if e['end'] >= checked]
+                      results[mid] = entries
+                      report.append({'museumId': mid, 'officialUrl': config['url'],
+                                     'status': 'obtained' if entries else 'needs_review',
+                                     'autoPublish': mid in approved, 'count': len(entries), 'entries': entries})
+                  except Exception as error:
+                      results[mid] = []
+                      report.append({'museumId': mid, 'status': 'error', 'error': type(error).__name__,
+                                     'autoPublish': mid in approved, 'count': 0})
+                  time.sleep(1)
+              save_json('report/collection-report.json', report)
+              summary = ['## Museum feed collection', '', 'Preview entries are not published unless their adapter is enabled.', '',
+                         '| Museum | Result | Count | Auto publish |', '|---|---|---:|---|']
+              for row in report:
+                  summary.append('| {museumId} | {status} | {count} | {autoPublish} |'.format(**row))
+              summary += ['', 'Other museums, including Minpaku, keep their saved data.',
+                          'See the collection-report artifact for exact titles, dates and official links.']
+              Path('report/summary.md').write_text('\n'.join(summary)+'\n')
+              if os.environ.get('GITHUB_STEP_SUMMARY'):
+                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+                      f.write('\n'.join(summary)+'\n')
+              output = publication(previous, results, approved, checked)
+              if output != previous:
+                  save_json('exhibitions.json', output)
+              if not any(results.values()):
+                  raise RuntimeError('No source could be extracted. Existing feed retained.')
+              if approved and not any(results.get(mid) for mid in approved):
+                  raise RuntimeError('All enabled sources failed. Existing feed retained.')
+
+          if __name__ == '__main__':
+              main()
+          MUSEUM_FILE_END
+          cat > _museum/sources.json <<'MUSEUM_FILE_END'
+          [
+           {"id":"kyohaku","url":"https://www.kyohaku.go.jp/jp/exhibitions/","path":"/jp/exhibitions/special/","require":"特別展"},
+           {"id":"kyocera","url":"https://kyotocity-kyocera.museum/exhibition","path":"/exhibition/[^/]+"},
+           {"id":"nakka","url":"https://nakka-art.jp/exhibition/held/","path":"/exhibition-post/"},
+           {"id":"osakaart","url":"https://www.osaka-art-museum.jp/","path":"/special_exhibition/"},
+           {"id":"bunpaku","url":"https://www.bunpaku.or.jp/","path":"/exhi_special_post/"},
+           {"id":"shiga","url":"https://www.shigamuseum.jp/exhibitions/","path":"/exhibitions/[^/]+"}
+          ]
+          MUSEUM_FILE_END
+          cat > _museum/seed.json <<'MUSEUM_FILE_END'
+          {
+            "schemaVersion": 1,
+            "updatedAt": "2026-09-02",
+            "museums": [
+              {
+                "id": "kyohaku",
+                "name": "京都国立博物館",
+                "region": "京都",
+                "genre": "歴史・考古",
+                "priority": 100,
+                "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+                "state": "manual"
+              },
+              {
+                "id": "narahaku",
+                "name": "奈良国立博物館",
+                "region": "奈良",
+                "genre": "歴史・考古",
+                "priority": 99,
+                "url": "https://www.narahaku.go.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "minpaku",
+                "name": "国立民族学博物館（みんぱく）",
+                "region": "大阪",
+                "genre": "歴史・考古",
+                "priority": 99,
+                "url": "https://www.minpaku.ac.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "kyocera",
+                "name": "京都市京セラ美術館",
+                "region": "京都",
+                "genre": "美術",
+                "priority": 98,
+                "url": "https://kyotocity-kyocera.museum/exhibition",
+                "state": "manual"
+              },
+              {
+                "id": "nmao",
+                "name": "国立国際美術館",
+                "region": "大阪",
+                "genre": "美術",
+                "priority": 97,
+                "url": "https://www.nmao.go.jp/exhibition/current_exhibition/",
+                "state": "manual"
+              },
+              {
+                "id": "nakka",
+                "name": "大阪中之島美術館",
+                "region": "大阪",
+                "genre": "美術",
+                "priority": 96,
+                "url": "https://nakka-art.jp/exhibition/held/",
+                "state": "manual"
+              },
+              {
+                "id": "osakaart",
+                "name": "大阪市立美術館",
+                "region": "大阪",
+                "genre": "美術",
+                "priority": 95,
+                "url": "https://www.osaka-art-museum.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "hyogo",
+                "name": "兵庫県立美術館",
+                "region": "兵庫",
+                "genre": "美術",
+                "priority": 94,
+                "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+                "state": "manual"
+              },
+              {
+                "id": "momak",
+                "name": "京都国立近代美術館",
+                "region": "京都",
+                "genre": "美術",
+                "priority": 93,
+                "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
+                "state": "manual"
+              },
+              {
+                "id": "bunpaku",
+                "name": "京都文化博物館",
+                "region": "京都",
+                "genre": "歴史・考古",
+                "priority": 88,
+                "url": "https://www.bunpaku.or.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "osakahistory",
+                "name": "大阪歴史博物館",
+                "region": "大阪",
+                "genre": "歴史・考古",
+                "priority": 87,
+                "url": "https://www.osakamushis.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "harukas",
+                "name": "あべのハルカス美術館",
+                "region": "大阪",
+                "genre": "美術",
+                "priority": 86,
+                "url": "https://www.aham.jp/exhibition/future/",
+                "state": "manual"
+              },
+              {
+                "id": "kobe",
+                "name": "神戸市立博物館",
+                "region": "兵庫",
+                "genre": "歴史・考古",
+                "priority": 85,
+                "url": "https://www.kobecitymuseum.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "shiga",
+                "name": "滋賀県立美術館",
+                "region": "滋賀",
+                "genre": "美術",
+                "priority": 84,
+                "url": "https://www.shigamuseum.jp/exhibitions/",
+                "state": "manual"
+              },
+              {
+                "id": "momaw",
+                "name": "和歌山県立近代美術館",
+                "region": "和歌山",
+                "genre": "美術",
+                "priority": 83,
+                "url": "https://www.momaw.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "miho",
+                "name": "MIHO MUSEUM",
+                "region": "滋賀",
+                "genre": "美術",
+                "priority": 82,
+                "url": "https://www.miho.jp/upcoming_exhibition/",
+                "state": "manual"
+              },
+              {
+                "id": "sagawa",
+                "name": "佐川美術館",
+                "region": "滋賀",
+                "genre": "美術",
+                "priority": 81,
+                "url": "https://www.sagawa-artmuseum.or.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "omnh",
+                "name": "大阪市立自然史博物館",
+                "region": "大阪",
+                "genre": "科学・自然",
+                "priority": 80,
+                "url": "https://omnh.jp/",
+                "state": "manual"
+              },
+              {
+                "id": "railway",
+                "name": "京都鉄道博物館",
+                "region": "京都",
+                "genre": "科学・自然",
+                "priority": 79,
+                "url": "https://www.kyotorailwaymuseum.jp/",
+                "state": "unverified"
+              },
+              {
+                "id": "biwako",
+                "name": "滋賀県立琵琶湖博物館",
+                "region": "滋賀",
+                "genre": "科学・自然",
+                "priority": 78,
+                "url": "https://www.biwahaku.jp/",
+                "state": "unverified"
+              },
+              {
+                "id": "kashihara",
+                "name": "奈良県立橿原考古学研究所附属博物館",
+                "region": "奈良",
+                "genre": "歴史・考古",
+                "priority": 77,
+                "url": "https://www.kashikoken.jp/museum/",
+                "state": "unverified"
+              }
+            ],
+            "exhibitions": [
+              {
+                "id": "ca18d7b96349e79e",
+                "museumId": "kyohaku",
+                "title": "特別展 源氏物語 王朝のかがやき",
+                "start": "2026-10-06",
+                "end": "2026-11-29",
+                "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "f317fdcac0c2d571",
+                "museumId": "kyohaku",
+                "title": "特別展 大狩野派〈第1部 室町～桃山編〉",
+                "start": "2027-04-20",
+                "end": "2027-05-30",
+                "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "a36e257e2a750b71",
+                "museumId": "kyohaku",
+                "title": "特別展 大狩野派〈第2部 江戸～明治編〉",
+                "start": "2027-06-08",
+                "end": "2027-07-19",
+                "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "d8f54e8cc4b55712",
+                "museumId": "narahaku",
+                "title": "第78回 正倉院展",
+                "start": "2026-10-24",
+                "end": "2026-11-09",
+                "url": "https://shosoin-ten.jp/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "894d62a6dc68f305",
+                "museumId": "kyocera",
+                "title": "浮世絵スーパークリエイター 歌川国芳展",
+                "start": "2026-07-18",
+                "end": "2026-09-23",
+                "url": "https://kyotocity-kyocera.museum/exhibition",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "e35365db6b1deb1f",
+                "museumId": "kyocera",
+                "title": "テート美術館 ― YBA & BEYOND 世界を変えた90s英国アート",
+                "start": "2026-06-03",
+                "end": "2026-09-06",
+                "url": "https://kyotocity-kyocera.museum/exhibition",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "4defb124a5afa566",
+                "museumId": "nmao",
+                "title": "笹本晃 ラボラトリー",
+                "start": "2026-07-19",
+                "end": "2026-11-03",
+                "url": "https://www.nmao.go.jp/exhibition/current_exhibition/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "3b2b2b1608a44107",
+                "museumId": "nakka",
+                "title": "スイス絵画の異才 カール・ヴァルザー",
+                "start": "2026-07-04",
+                "end": "2026-09-27",
+                "url": "https://nakka-art.jp/exhibition/held/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "a39ac0af10e95713",
+                "museumId": "nakka",
+                "title": "フェルメール《真珠の耳飾りの少女》展",
+                "start": "2026-08-21",
+                "end": "2026-09-27",
+                "url": "https://nakka-art.jp/exhibition/held/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "826d083b3793c866",
+                "museumId": "nakka",
+                "title": "NHK日曜美術館50年展",
+                "start": "2026-10-10",
+                "end": "2026-12-20",
+                "url": "https://nakka-art.jp/exhibition/held/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "f7873c442e709c24",
+                "museumId": "nakka",
+                "title": "大英博物館日本美術コレクション 百花繚乱〜海を越えた江戸絵画",
+                "start": "2026-10-31",
+                "end": "2027-01-31",
+                "url": "https://nakka-art.jp/exhibition/held/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "ea9da9675bc35563",
+                "museumId": "osakaart",
+                "title": "開館90周年記念特別展 水滸伝",
+                "start": "2026-07-11",
+                "end": "2026-09-06",
+                "url": "https://www.osaka-art-museum.jp/special_exhibition/8301",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "242a76228aff74c1",
+                "museumId": "osakaart",
+                "title": "躍動する明代の書－台北・何創時コレクションの至宝",
+                "start": "2026-10-09",
+                "end": "2026-12-20",
+                "url": "https://www.osaka-art-museum.jp/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "e26b95490c790430",
+                "museumId": "osakaart",
+                "title": "円山応挙 リアルの先へ 空間革命",
+                "start": "2027-02-06",
+                "end": "2027-04-04",
+                "url": "https://www.osaka-art-museum.jp/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "ba260a45643f9574",
+                "museumId": "hyogo",
+                "title": "県立ミュージアムズ連携企画 ミュージアムのミステリー",
+                "start": "2026-06-06",
+                "end": "2026-09-13",
+                "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "2f76a934e42d567c",
+                "museumId": "hyogo",
+                "title": "松方幸次郎 × 山村德太郎 蒐集のパッション ―ロダンを日本へ、具体を世界へ",
+                "start": "2026-10-10",
+                "end": "2026-12-27",
+                "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "af5d25006c47cc01",
+                "museumId": "hyogo",
+                "title": "新！浮世絵展―幕末明治の天才絵師たち",
+                "start": "2027-03-20",
+                "end": "2027-05-23",
+                "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "7c81190f26931131",
+                "museumId": "momak",
+                "title": "フォンタネージ—イタリアの光・心の風景",
+                "start": "2026-07-18",
+                "end": "2026-10-04",
+                "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "d09a1ba19b73ed8c",
+                "museumId": "momak",
+                "title": "ジュエリーは、誰を夢みる",
+                "start": "2026-10-24",
+                "end": "2027-01-17",
+                "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "78395bc937b7cc7e",
+                "museumId": "bunpaku",
+                "title": "マリメッコ展 模様のちから",
+                "start": "2026-07-04",
+                "end": "2026-09-06",
+                "url": "https://www.bunpaku.or.jp/exhi_special_post/20260704-0906/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "dea61e9d78ee46cb",
+                "museumId": "bunpaku",
+                "title": "寛永 太平がはぐくむ美",
+                "start": "2026-09-19",
+                "end": "2026-11-15",
+                "url": "https://www.bunpaku.or.jp/exhi_special_post/20260919-1115/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "ccc1f2b2db1f7441",
+                "museumId": "osakahistory",
+                "title": "NHK大河ドラマ特別展「豊臣兄弟！」",
+                "start": "2026-07-08",
+                "end": "2026-08-31",
+                "url": "https://www.osakamushis.jp/news/2026/toyotomikyodai.html",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "0782204f79cc2023",
+                "museumId": "harukas",
+                "title": "ゴッホの跳ね橋と印象派の画家たち ヴァルラフ＝リヒャルツ美術館所蔵",
+                "start": "2026-07-04",
+                "end": "2026-09-09",
+                "url": "https://www.aham.jp/exhibition/future/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "fc80471014318dd0",
+                "museumId": "harukas",
+                "title": "アンドリュー・ワイエス展",
+                "start": "2026-10-03",
+                "end": "2026-12-06",
+                "url": "https://www.aham.jp/exhibition/future/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "8786eb9a9fe0c874",
+                "museumId": "kobe",
+                "title": "ゴールドマン コレクション 河鍋暁斎の世界",
+                "start": "2026-07-11",
+                "end": "2026-09-23",
+                "url": "https://www.kobecitymuseum.jp/exhibition/detail?exhibition=396",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "3af8cae45d49a427",
+                "museumId": "shiga",
+                "title": "丸木スマ展 73歳からのアーティスト",
+                "start": "2026-09-11",
+                "end": "2026-11-23",
+                "url": "https://www.shigamuseum.jp/exhibitions/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "6bdcc685244c95fa",
+                "museumId": "shiga",
+                "title": "佐川晃司展（仮称）",
+                "start": "2027-01-15",
+                "end": "2027-03-22",
+                "url": "https://www.shigamuseum.jp/exhibitions/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "003cbb53bb1294c4",
+                "museumId": "momaw",
+                "title": "もしも“美術”がなかったら",
+                "start": "2026-07-11",
+                "end": "2026-09-27",
+                "url": "https://www.momaw.jp/information/exhibitions-2026/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "a747542539585cec",
+                "museumId": "miho",
+                "title": "百済寺と近江の仏教美術―百済寺秘仏公開によせて―",
+                "start": "2026-09-26",
+                "end": "2026-12-06",
+                "url": "https://www.miho.jp/exhibition/autumn2026/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "e300acffed8d1351",
+                "museumId": "sagawa",
+                "title": "魔法の美術館Ⅳ",
+                "start": "2026-07-01",
+                "end": "2026-09-06",
+                "url": "https://www.sagawa-artmuseum.or.jp/",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "d8243a49e08c54c5",
+                "museumId": "omnh",
+                "title": "大絶滅展―生命史のビッグファイブ",
+                "start": "2026-07-17",
+                "end": "2026-10-12",
+                "url": "https://omnh.jp/archives/13919",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "14173c3d3c23a87e",
+                "museumId": "minpaku",
+                "title": "特別展 沙流川に生きる ――サルンクㇽの近代",
+                "start": "2026-09-25",
+                "end": "2026-12-15",
+                "url": "https://www.minpaku.ac.jp/ai1ec_event/69685",
+                "verifiedAt": "2026-09-02"
+              },
+              {
+                "id": "64d07ff72f7f56ef",
+                "museumId": "minpaku",
+                "title": "企画展 トレス海峡（ゼナドスケス）と日本――大島襄二写真コレクションから見た交流と歴史",
+                "start": "2026-09-10",
+                "end": "2026-12-15",
+                "url": "https://www.minpaku.ac.jp/ai1ec_event/69812",
+                "verifiedAt": "2026-09-02"
+              }
+            ],
+            "note": "公式確認済みの一部の特別展・企画展。網羅一覧ではありません。"
+          }
+          MUSEUM_FILE_END
+          cat > _museum/test_run.py <<'MUSEUM_FILE_END'
+          import copy, json, unittest
+          from pathlib import Path
+          from run import publication, validate
+
+          class PublicationTests(unittest.TestCase):
+              def setUp(self):
+                  self.old=json.loads(Path('seed.json').read_text())
+                  self.entry=copy.deepcopy(next(e for e in self.old['exhibitions'] if e['museumId']=='kyohaku'))
+                  self.entry['end']='2026-11-30'
+                  self.entry['verifiedAt']='2026-09-03'
+              def test_preview_keeps_entire_feed_unchanged(self):
+                  self.assertEqual(publication(self.old,{'kyohaku':[self.entry]},set(),'2026-09-03'),self.old)
+              def test_all_failed_preserves_updated_at(self):
+                  self.assertEqual(publication(self.old,{'kyohaku':[]},{'kyohaku'},'2026-09-03'),self.old)
+              def test_only_enabled_source_changes(self):
+                  out=publication(self.old,{'kyohaku':[self.entry]},{'kyohaku'},'2026-09-03')
+                  self.assertEqual(next(e for e in out['exhibitions'] if e['id']==self.entry['id'])['end'],'2026-11-30')
+                  self.assertEqual([e for e in out['exhibitions'] if e['museumId']=='minpaku'],[e for e in self.old['exhibitions'] if e['museumId']=='minpaku'])
+                  self.assertEqual(len(out['exhibitions']),len(self.old['exhibitions']))
+              def test_rejects_invalid_date(self):
+                  self.entry['end']='2026-01-01'
+                  with self.assertRaises(ValueError):publication(self.old,{'kyohaku':[self.entry]},{'kyohaku'},'2026-09-03')
+              def test_rejects_unexpected_museum(self):
+                  with self.assertRaises(ValueError):publication(self.old,{'shiga':[self.entry]},{'shiga'},'2026-09-03')
+              def test_rejects_http(self):
+                  self.entry['url']='http://example.com'
+                  with self.assertRaises(ValueError):publication(self.old,{'kyohaku':[self.entry]},{'kyohaku'},'2026-09-03')
+              def test_rejects_mass_addition(self):
+                  with self.assertRaises(ValueError):publication(self.old,{'kyohaku':[self.entry]*51},{'kyohaku'},'2026-09-03')
+              def test_seed_is_valid(self):validate(self.old)
+          if __name__=='__main__':unittest.main()
+          MUSEUM_FILE_END
+      - name: Test preservation and validation
+        working-directory: _museum
+        run: python3 -m unittest -v test_run.py
+      - name: Initialize saved exhibition feed
+        shell: bash
+        run: |
+          if [ ! -f exhibitions.json ]; then
+            cp _museum/seed.json exhibitions.json
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- exhibitions.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update museum exhibition feed'
+            git push origin HEAD:main
+          fi
+      - name: Collect official exhibition pages
+        shell: bash
+        run: |
+          cp exhibitions.json _museum/exhibitions.json
+          cd _museum
+          python3 run.py
+          cp exhibitions.json ../exhibitions.json
+      - name: Publish reviewed updates
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- exhibitions.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update museum exhibition feed'
+            git push origin HEAD:main
+          fi
+      - name: Save collection report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: museum-collection-report
+          path: _museum/report/
+          retention-days: 7
+          if-no-files-found: warn
