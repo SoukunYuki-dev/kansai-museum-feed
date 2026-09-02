@@ -1,0 +1,495 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-02",
+  "museums": [
+    {
+      "id": "kyohaku",
+      "name": "京都国立博物館",
+      "region": "京都",
+      "genre": "歴史・考古",
+      "priority": 100,
+      "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+      "state": "manual"
+    },
+    {
+      "id": "narahaku",
+      "name": "奈良国立博物館",
+      "region": "奈良",
+      "genre": "歴史・考古",
+      "priority": 99,
+      "url": "https://www.narahaku.go.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "minpaku",
+      "name": "国立民族学博物館（みんぱく）",
+      "region": "大阪",
+      "genre": "歴史・考古",
+      "priority": 99,
+      "url": "https://www.minpaku.ac.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "kyocera",
+      "name": "京都市京セラ美術館",
+      "region": "京都",
+      "genre": "美術",
+      "priority": 98,
+      "url": "https://kyotocity-kyocera.museum/exhibition",
+      "state": "manual"
+    },
+    {
+      "id": "nmao",
+      "name": "国立国際美術館",
+      "region": "大阪",
+      "genre": "美術",
+      "priority": 97,
+      "url": "https://www.nmao.go.jp/exhibition/current_exhibition/",
+      "state": "manual"
+    },
+    {
+      "id": "nakka",
+      "name": "大阪中之島美術館",
+      "region": "大阪",
+      "genre": "美術",
+      "priority": 96,
+      "url": "https://nakka-art.jp/exhibition/held/",
+      "state": "manual"
+    },
+    {
+      "id": "osakaart",
+      "name": "大阪市立美術館",
+      "region": "大阪",
+      "genre": "美術",
+      "priority": 95,
+      "url": "https://www.osaka-art-museum.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "hyogo",
+      "name": "兵庫県立美術館",
+      "region": "兵庫",
+      "genre": "美術",
+      "priority": 94,
+      "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+      "state": "manual"
+    },
+    {
+      "id": "momak",
+      "name": "京都国立近代美術館",
+      "region": "京都",
+      "genre": "美術",
+      "priority": 93,
+      "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
+      "state": "manual"
+    },
+    {
+      "id": "bunpaku",
+      "name": "京都文化博物館",
+      "region": "京都",
+      "genre": "歴史・考古",
+      "priority": 88,
+      "url": "https://www.bunpaku.or.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "osakahistory",
+      "name": "大阪歴史博物館",
+      "region": "大阪",
+      "genre": "歴史・考古",
+      "priority": 87,
+      "url": "https://www.osakamushis.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "harukas",
+      "name": "あべのハルカス美術館",
+      "region": "大阪",
+      "genre": "美術",
+      "priority": 86,
+      "url": "https://www.aham.jp/exhibition/future/",
+      "state": "manual"
+    },
+    {
+      "id": "kobe",
+      "name": "神戸市立博物館",
+      "region": "兵庫",
+      "genre": "歴史・考古",
+      "priority": 85,
+      "url": "https://www.kobecitymuseum.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "shiga",
+      "name": "滋賀県立美術館",
+      "region": "滋賀",
+      "genre": "美術",
+      "priority": 84,
+      "url": "https://www.shigamuseum.jp/exhibitions/",
+      "state": "manual"
+    },
+    {
+      "id": "momaw",
+      "name": "和歌山県立近代美術館",
+      "region": "和歌山",
+      "genre": "美術",
+      "priority": 83,
+      "url": "https://www.momaw.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "miho",
+      "name": "MIHO MUSEUM",
+      "region": "滋賀",
+      "genre": "美術",
+      "priority": 82,
+      "url": "https://www.miho.jp/upcoming_exhibition/",
+      "state": "manual"
+    },
+    {
+      "id": "sagawa",
+      "name": "佐川美術館",
+      "region": "滋賀",
+      "genre": "美術",
+      "priority": 81,
+      "url": "https://www.sagawa-artmuseum.or.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "omnh",
+      "name": "大阪市立自然史博物館",
+      "region": "大阪",
+      "genre": "科学・自然",
+      "priority": 80,
+      "url": "https://omnh.jp/",
+      "state": "manual"
+    },
+    {
+      "id": "railway",
+      "name": "京都鉄道博物館",
+      "region": "京都",
+      "genre": "科学・自然",
+      "priority": 79,
+      "url": "https://www.kyotorailwaymuseum.jp/",
+      "state": "unverified"
+    },
+    {
+      "id": "biwako",
+      "name": "滋賀県立琵琶湖博物館",
+      "region": "滋賀",
+      "genre": "科学・自然",
+      "priority": 78,
+      "url": "https://www.biwahaku.jp/",
+      "state": "unverified"
+    },
+    {
+      "id": "kashihara",
+      "name": "奈良県立橿原考古学研究所附属博物館",
+      "region": "奈良",
+      "genre": "歴史・考古",
+      "priority": 77,
+      "url": "https://www.kashikoken.jp/museum/",
+      "state": "unverified"
+    }
+  ],
+  "exhibitions": [
+    {
+      "id": "ca18d7b96349e79e",
+      "museumId": "kyohaku",
+      "title": "特別展 源氏物語 王朝のかがやき",
+      "start": "2026-10-06",
+      "end": "2026-11-29",
+      "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "f317fdcac0c2d571",
+      "museumId": "kyohaku",
+      "title": "特別展 大狩野派〈第1部 室町～桃山編〉",
+      "start": "2027-04-20",
+      "end": "2027-05-30",
+      "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "a36e257e2a750b71",
+      "museumId": "kyohaku",
+      "title": "特別展 大狩野派〈第2部 江戸～明治編〉",
+      "start": "2027-06-08",
+      "end": "2027-07-19",
+      "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "d8f54e8cc4b55712",
+      "museumId": "narahaku",
+      "title": "第78回 正倉院展",
+      "start": "2026-10-24",
+      "end": "2026-11-09",
+      "url": "https://shosoin-ten.jp/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "894d62a6dc68f305",
+      "museumId": "kyocera",
+      "title": "浮世絵スーパークリエイター 歌川国芳展",
+      "start": "2026-07-18",
+      "end": "2026-09-23",
+      "url": "https://kyotocity-kyocera.museum/exhibition",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "e35365db6b1deb1f",
+      "museumId": "kyocera",
+      "title": "テート美術館 ― YBA & BEYOND 世界を変えた90s英国アート",
+      "start": "2026-06-03",
+      "end": "2026-09-06",
+      "url": "https://kyotocity-kyocera.museum/exhibition",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "4defb124a5afa566",
+      "museumId": "nmao",
+      "title": "笹本晃 ラボラトリー",
+      "start": "2026-07-19",
+      "end": "2026-11-03",
+      "url": "https://www.nmao.go.jp/exhibition/current_exhibition/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "3b2b2b1608a44107",
+      "museumId": "nakka",
+      "title": "スイス絵画の異才 カール・ヴァルザー",
+      "start": "2026-07-04",
+      "end": "2026-09-27",
+      "url": "https://nakka-art.jp/exhibition/held/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "a39ac0af10e95713",
+      "museumId": "nakka",
+      "title": "フェルメール《真珠の耳飾りの少女》展",
+      "start": "2026-08-21",
+      "end": "2026-09-27",
+      "url": "https://nakka-art.jp/exhibition/held/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "826d083b3793c866",
+      "museumId": "nakka",
+      "title": "NHK日曜美術館50年展",
+      "start": "2026-10-10",
+      "end": "2026-12-20",
+      "url": "https://nakka-art.jp/exhibition/held/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "f7873c442e709c24",
+      "museumId": "nakka",
+      "title": "大英博物館日本美術コレクション 百花繚乱〜海を越えた江戸絵画",
+      "start": "2026-10-31",
+      "end": "2027-01-31",
+      "url": "https://nakka-art.jp/exhibition/held/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "ea9da9675bc35563",
+      "museumId": "osakaart",
+      "title": "開館90周年記念特別展 水滸伝",
+      "start": "2026-07-11",
+      "end": "2026-09-06",
+      "url": "https://www.osaka-art-museum.jp/special_exhibition/8301",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "242a76228aff74c1",
+      "museumId": "osakaart",
+      "title": "躍動する明代の書－台北・何創時コレクションの至宝",
+      "start": "2026-10-09",
+      "end": "2026-12-20",
+      "url": "https://www.osaka-art-museum.jp/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "e26b95490c790430",
+      "museumId": "osakaart",
+      "title": "円山応挙 リアルの先へ 空間革命",
+      "start": "2027-02-06",
+      "end": "2027-04-04",
+      "url": "https://www.osaka-art-museum.jp/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "ba260a45643f9574",
+      "museumId": "hyogo",
+      "title": "県立ミュージアムズ連携企画 ミュージアムのミステリー",
+      "start": "2026-06-06",
+      "end": "2026-09-13",
+      "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "2f76a934e42d567c",
+      "museumId": "hyogo",
+      "title": "松方幸次郎 × 山村德太郎 蒐集のパッション ―ロダンを日本へ、具体を世界へ",
+      "start": "2026-10-10",
+      "end": "2026-12-27",
+      "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "af5d25006c47cc01",
+      "museumId": "hyogo",
+      "title": "新！浮世絵展―幕末明治の天才絵師たち",
+      "start": "2027-03-20",
+      "end": "2027-05-23",
+      "url": "https://www.artm.pref.hyogo.jp/exhibition/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "7c81190f26931131",
+      "museumId": "momak",
+      "title": "フォンタネージ—イタリアの光・心の風景",
+      "start": "2026-07-18",
+      "end": "2026-10-04",
+      "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "d09a1ba19b73ed8c",
+      "museumId": "momak",
+      "title": "ジュエリーは、誰を夢みる",
+      "start": "2026-10-24",
+      "end": "2027-01-17",
+      "url": "https://www.momak.go.jp/Japanese/exhibitionArchive/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "78395bc937b7cc7e",
+      "museumId": "bunpaku",
+      "title": "マリメッコ展 模様のちから",
+      "start": "2026-07-04",
+      "end": "2026-09-06",
+      "url": "https://www.bunpaku.or.jp/exhi_special_post/20260704-0906/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "dea61e9d78ee46cb",
+      "museumId": "bunpaku",
+      "title": "寛永 太平がはぐくむ美",
+      "start": "2026-09-19",
+      "end": "2026-11-15",
+      "url": "https://www.bunpaku.or.jp/exhi_special_post/20260919-1115/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "ccc1f2b2db1f7441",
+      "museumId": "osakahistory",
+      "title": "NHK大河ドラマ特別展「豊臣兄弟！」",
+      "start": "2026-07-08",
+      "end": "2026-08-31",
+      "url": "https://www.osakamushis.jp/news/2026/toyotomikyodai.html",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "0782204f79cc2023",
+      "museumId": "harukas",
+      "title": "ゴッホの跳ね橋と印象派の画家たち ヴァルラフ＝リヒャルツ美術館所蔵",
+      "start": "2026-07-04",
+      "end": "2026-09-09",
+      "url": "https://www.aham.jp/exhibition/future/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "fc80471014318dd0",
+      "museumId": "harukas",
+      "title": "アンドリュー・ワイエス展",
+      "start": "2026-10-03",
+      "end": "2026-12-06",
+      "url": "https://www.aham.jp/exhibition/future/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "8786eb9a9fe0c874",
+      "museumId": "kobe",
+      "title": "ゴールドマン コレクション 河鍋暁斎の世界",
+      "start": "2026-07-11",
+      "end": "2026-09-23",
+      "url": "https://www.kobecitymuseum.jp/exhibition/detail?exhibition=396",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "3af8cae45d49a427",
+      "museumId": "shiga",
+      "title": "丸木スマ展 73歳からのアーティスト",
+      "start": "2026-09-11",
+      "end": "2026-11-23",
+      "url": "https://www.shigamuseum.jp/exhibitions/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "6bdcc685244c95fa",
+      "museumId": "shiga",
+      "title": "佐川晃司展（仮称）",
+      "start": "2027-01-15",
+      "end": "2027-03-22",
+      "url": "https://www.shigamuseum.jp/exhibitions/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "003cbb53bb1294c4",
+      "museumId": "momaw",
+      "title": "もしも“美術”がなかったら",
+      "start": "2026-07-11",
+      "end": "2026-09-27",
+      "url": "https://www.momaw.jp/information/exhibitions-2026/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "a747542539585cec",
+      "museumId": "miho",
+      "title": "百済寺と近江の仏教美術―百済寺秘仏公開によせて―",
+      "start": "2026-09-26",
+      "end": "2026-12-06",
+      "url": "https://www.miho.jp/exhibition/autumn2026/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "e300acffed8d1351",
+      "museumId": "sagawa",
+      "title": "魔法の美術館Ⅳ",
+      "start": "2026-07-01",
+      "end": "2026-09-06",
+      "url": "https://www.sagawa-artmuseum.or.jp/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "d8243a49e08c54c5",
+      "museumId": "omnh",
+      "title": "大絶滅展―生命史のビッグファイブ",
+      "start": "2026-07-17",
+      "end": "2026-10-12",
+      "url": "https://omnh.jp/archives/13919",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "14173c3d3c23a87e",
+      "museumId": "minpaku",
+      "title": "特別展 沙流川に生きる ――サルンクㇽの近代",
+      "start": "2026-09-25",
+      "end": "2026-12-15",
+      "url": "https://www.minpaku.ac.jp/ai1ec_event/69685",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "64d07ff72f7f56ef",
+      "museumId": "minpaku",
+      "title": "企画展 トレス海峡（ゼナドスケス）と日本――大島襄二写真コレクションから見た交流と歴史",
+      "start": "2026-09-10",
+      "end": "2026-12-15",
+      "url": "https://www.minpaku.ac.jp/ai1ec_event/69812",
+      "verifiedAt": "2026-09-02"
+    }
+  ],
+  "note": "公式確認済みの一部の特別展・企画展。網羅一覧ではありません。"
+}
