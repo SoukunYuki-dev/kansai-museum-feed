@@ -9,7 +9,7 @@
       "genre": "歴史・考古",
       "priority": 100,
       "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
-      "state": "manual"
+      "state": "ok"
     },
     {
       "id": "narahaku",
@@ -36,7 +36,7 @@
       "genre": "美術",
       "priority": 98,
       "url": "https://kyotocity-kyocera.museum/exhibition",
-      "state": "manual"
+      "state": "ok"
     },
     {
       "id": "nmao",
@@ -54,7 +54,7 @@
       "genre": "美術",
       "priority": 96,
       "url": "https://nakka-art.jp/exhibition/held/",
-      "state": "manual"
+      "state": "ok"
     },
     {
       "id": "osakaart",
@@ -63,7 +63,7 @@
       "genre": "美術",
       "priority": 95,
       "url": "https://www.osaka-art-museum.jp/",
-      "state": "manual"
+      "state": "ok"
     },
     {
       "id": "hyogo",
@@ -90,7 +90,7 @@
       "genre": "歴史・考古",
       "priority": 88,
       "url": "https://www.bunpaku.or.jp/",
-      "state": "manual"
+      "state": "ok"
     },
     {
       "id": "osakahistory",
@@ -126,7 +126,7 @@
       "genre": "美術",
       "priority": 84,
       "url": "https://www.shigamuseum.jp/exhibitions/",
-      "state": "manual"
+      "state": "ok"
     },
     {
       "id": "momaw",
@@ -199,25 +199,25 @@
       "title": "特別展 源氏物語 王朝のかがやき",
       "start": "2026-10-06",
       "end": "2026-11-29",
-      "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+      "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2026_genji/",
       "verifiedAt": "2026-09-02"
     },
     {
       "id": "f317fdcac0c2d571",
       "museumId": "kyohaku",
-      "title": "特別展 大狩野派〈第1部 室町～桃山編〉",
+      "title": "京都国立博物館開館130周年記念 特別展 大狩野派 <第1部 室町~桃山編>",
       "start": "2027-04-20",
       "end": "2027-05-30",
-      "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+      "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2027_kano/",
       "verifiedAt": "2026-09-02"
     },
     {
       "id": "a36e257e2a750b71",
       "museumId": "kyohaku",
-      "title": "特別展 大狩野派〈第2部 江戸～明治編〉",
+      "title": "京都国立博物館開館130周年記念 特別展 大狩野派 <第2部 江戸~明治編>",
       "start": "2027-06-08",
       "end": "2027-07-19",
-      "url": "https://www.kyohaku.go.jp/jp/exhibitions/",
+      "url": "https://www.kyohaku.go.jp/jp/exhibitions/special/2027_kano/",
       "verifiedAt": "2026-09-02"
     },
     {
@@ -235,7 +235,7 @@
       "title": "浮世絵スーパークリエイター 歌川国芳展",
       "start": "2026-07-18",
       "end": "2026-09-23",
-      "url": "https://kyotocity-kyocera.museum/exhibition",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20260718-20260923",
       "verifiedAt": "2026-09-02"
     },
     {
@@ -244,7 +244,7 @@
       "title": "テート美術館 ― YBA & BEYOND 世界を変えた90s英国アート",
       "start": "2026-06-03",
       "end": "2026-09-06",
-      "url": "https://kyotocity-kyocera.museum/exhibition",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20260603-20260906",
       "verifiedAt": "2026-09-02"
     },
     {
@@ -262,16 +262,16 @@
       "title": "スイス絵画の異才 カール・ヴァルザー",
       "start": "2026-07-04",
       "end": "2026-09-27",
-      "url": "https://nakka-art.jp/exhibition/held/",
+      "url": "https://nakka-art.jp/exhibition-post/karlwalser-2026/",
       "verifiedAt": "2026-09-02"
     },
     {
       "id": "a39ac0af10e95713",
       "museumId": "nakka",
-      "title": "フェルメール《真珠の耳飾りの少女》展",
+      "title": "フェルメール《真珠の耳飾りの少女》展 17世紀オランダ絵画の名品、奇跡の再来日",
       "start": "2026-08-21",
       "end": "2026-09-27",
-      "url": "https://nakka-art.jp/exhibition/held/",
+      "url": "https://nakka-art.jp/exhibition-post/vermeer2026/",
       "verifiedAt": "2026-09-02"
     },
     {
@@ -280,7 +280,7 @@
       "title": "NHK日曜美術館50年展",
       "start": "2026-10-10",
       "end": "2026-12-20",
-      "url": "https://nakka-art.jp/exhibition/held/",
+      "url": "https://nakka-art.jp/exhibition-post/nichibiten50/",
       "verifiedAt": "2026-09-02"
     },
     {
@@ -295,7 +295,7 @@
     {
       "id": "ea9da9675bc35563",
       "museumId": "osakaart",
-      "title": "開館90周年記念特別展 水滸伝",
+      "title": "大阪市立美術館開館90周年記念特別展 水滸伝",
       "start": "2026-07-11",
       "end": "2026-09-06",
       "url": "https://www.osaka-art-museum.jp/special_exhibition/8301",
@@ -316,7 +316,7 @@
       "title": "円山応挙 リアルの先へ 空間革命",
       "start": "2027-02-06",
       "end": "2027-04-04",
-      "url": "https://www.osaka-art-museum.jp/",
+      "url": "https://www.osaka-art-museum.jp/special_exhibition/10344",
       "verifiedAt": "2026-09-02"
     },
     {
@@ -367,7 +367,7 @@
     {
       "id": "78395bc937b7cc7e",
       "museumId": "bunpaku",
-      "title": "マリメッコ展 模様のちから",
+      "title": "マリメッコ展 模様のちから Marimekko: Art of Printmaking -Beauty, Dream, Love",
       "start": "2026-07-04",
       "end": "2026-09-06",
       "url": "https://www.bunpaku.or.jp/exhi_special_post/20260704-0906/",
@@ -376,7 +376,7 @@
     {
       "id": "dea61e9d78ee46cb",
       "museumId": "bunpaku",
-      "title": "寛永 太平がはぐくむ美",
+      "title": "寛永行幸四百年祭開催記念 特別展「寛永 太平がはぐくむ美」",
       "start": "2026-09-19",
       "end": "2026-11-15",
       "url": "https://www.bunpaku.or.jp/exhi_special_post/20260919-1115/",
@@ -424,16 +424,16 @@
       "title": "丸木スマ展 73歳からのアーティスト",
       "start": "2026-09-11",
       "end": "2026-11-23",
-      "url": "https://www.shigamuseum.jp/exhibitions/",
+      "url": "https://www.shigamuseum.jp/exhibitions/12995/",
       "verifiedAt": "2026-09-02"
     },
     {
       "id": "6bdcc685244c95fa",
       "museumId": "shiga",
-      "title": "佐川晃司展（仮称）",
+      "title": "佐川晃司展",
       "start": "2027-01-15",
       "end": "2027-03-22",
-      "url": "https://www.shigamuseum.jp/exhibitions/",
+      "url": "https://www.shigamuseum.jp/exhibitions/12978/",
       "verifiedAt": "2026-09-02"
     },
     {
@@ -488,6 +488,123 @@
       "start": "2026-09-10",
       "end": "2026-12-15",
       "url": "https://www.minpaku.ac.jp/ai1ec_event/69812",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "b9349995ff890242",
+      "museumId": "kyocera",
+      "title": "松延総司:壁",
+      "start": "2026-09-12",
+      "end": "2026-12-20",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20260912-20261220",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "6addd47068c1f7c1",
+      "museumId": "kyocera",
+      "title": "生誕140年記念 染織家 山鹿清華─宙翔ぶイマジネーション",
+      "start": "2026-09-19",
+      "end": "2026-12-20",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20260919-20261220",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "5f67fd983518d75a",
+      "museumId": "kyocera",
+      "title": "禅とジブリ",
+      "start": "2026-10-03",
+      "end": "2026-12-06",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20261003-20261206",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "4558f1e45e6a16a0",
+      "museumId": "kyocera",
+      "title": "スタジオジブリ企画制作『白隠さんの禅』京都展",
+      "start": "2026-12-17",
+      "end": "2027-01-11",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20261217-20270111",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "70872ce1d5efbaeb",
+      "museumId": "kyocera",
+      "title": "第119回日展京都展",
+      "start": "2026-12-19",
+      "end": "2027-01-16",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20261219-20270116",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "decbe2b5e36817d2",
+      "museumId": "kyocera",
+      "title": "藤野裕美子",
+      "start": "2027-01-15",
+      "end": "2027-04-18",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20270115-20270418",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "cccd8130f864eb13",
+      "museumId": "kyocera",
+      "title": "思考する彫刻家 ラファエル・ザルカと堀内正和 ―幾何学とモダニティをめぐる対話(仮称)",
+      "start": "2027-02-06",
+      "end": "2027-05-05",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20270206-20270505",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "1dd3d180b0921f9f",
+      "museumId": "kyocera",
+      "title": "ギルバート&ジョージ展",
+      "start": "2027-05-26",
+      "end": "2027-08-29",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20270526-20270829",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "62532064ed2558b6",
+      "museumId": "kyocera",
+      "title": "生誕150年 木島櫻谷",
+      "start": "2027-10-02",
+      "end": "2027-12-12",
+      "url": "https://kyotocity-kyocera.museum/exhibition/20271002-20271212",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "6792b4e8d6dca13c",
+      "museumId": "nakka",
+      "title": "橘 葉月",
+      "start": "2026-11-14",
+      "end": "2026-12-13",
+      "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir13/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "b932b735afdd4994",
+      "museumId": "nakka",
+      "title": "迫 鉄平",
+      "start": "2026-12-19",
+      "end": "2027-01-17",
+      "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir14/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "0b807c9d8d5894f4",
+      "museumId": "nakka",
+      "title": "乾 真裕子",
+      "start": "2027-01-23",
+      "end": "2027-02-21",
+      "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir15/",
+      "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "ef2e4d15dc7fee29",
+      "museumId": "shiga",
+      "title": "金氏徹平 煙と霧 中山道柏原宿",
+      "start": "2026-10-03",
+      "end": "2026-12-13",
+      "url": "https://www.shigamuseum.jp/exhibitions/14001/",
       "verifiedAt": "2026-09-02"
     }
   ],
