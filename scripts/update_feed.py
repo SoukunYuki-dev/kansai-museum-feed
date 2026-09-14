@@ -39,21 +39,29 @@ def publish(previous,results,enabled,checked,retention_days=30):
         entries=results.get(museum_id)
         if not entries: continue
         if len(entries)>50 or any(e["museumId"]!=museum_id for e in entries): raise ValueError("suspicious source result")
-        old=[e for e in existing if e["museumId"]==museum_id]; merged=[]
+        old=[e for e in existing if e["museumId"]==museum_id]; replacements={}; additions=[]
         for entry in entries:
             entry={**entry,"title":clean_title(entry["title"],museum_id)}
             prior=_match(old,entry)
             if prior:
                 candidate={**prior,**entry}; candidate["id"]=prior["id"]
                 if any(candidate.get(k)!=prior.get(k) for k in ("title","start","end","url")): candidate["verifiedAt"]=checked
-                merged.append(candidate)
-            else: merged.append({**entry,"verifiedAt":checked}); changed=True
-        cutoff=date.fromisoformat(checked)-timedelta(days=retention_days); retained_ids={e["id"] for e in merged}
-        retained=[e for e in old if date.fromisoformat(e["end"])>=cutoff and e["id"] not in retained_ids]
-        replacement=merged+retained
-        if replacement!=old: changed=True
-        existing=[e for e in existing if e["museumId"]!=museum_id]+replacement; museums[museum_id]["state"]="ok"
-    output["exhibitions"]=sorted(existing,key=lambda e:(museum_order[e["museumId"]],e["start"],e["id"]))
+                replacements[prior["id"]]=candidate
+            else: additions.append({**entry,"verifiedAt":checked})
+        cutoff=date.fromisoformat(checked)-timedelta(days=retention_days); rebuilt=[]; last_position=None
+        for old_entry in existing:
+            if old_entry["museumId"]!=museum_id:
+                rebuilt.append(old_entry); continue
+            replacement=replacements.get(old_entry["id"])
+            if replacement is not None: rebuilt.append(replacement)
+            elif date.fromisoformat(old_entry["end"])>=cutoff: rebuilt.append(old_entry)
+            last_position=len(rebuilt)
+        if additions:
+            at=last_position if last_position is not None else len(rebuilt)
+            rebuilt[at:at]=sorted(additions,key=lambda e:(e["start"],e["id"]))
+        existing=rebuilt; museums[museum_id]["state"]="ok"
+    output["exhibitions"]=existing
+    changed=output["exhibitions"]!=previous["exhibitions"] or output["museums"]!=previous["museums"]
     if changed: output["updatedAt"]=checked
     validate(output); return output,changed
 

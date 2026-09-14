@@ -16,16 +16,17 @@ class FeedTests(unittest.TestCase):
     def test_content_change_publishes(self):
         old=seed(); new=[{**old["exhibitions"][0],"title":"新題"}]; out,changed=publish(old,{"minpaku":new},{"minpaku"},"2026-09-11"); self.assertTrue(changed); self.assertEqual("新題",out["exhibitions"][0]["title"])
     def test_unchanged_content_does_not_commit(self):
-        old=seed(); out,changed=publish(old,{"minpaku":[dict(old["exhibitions"][0])]},{"minpaku"},"2026-09-11"); self.assertFalse(changed); self.assertEqual(old["updatedAt"],out["updatedAt"])
+        old=seed(); old["museums"][0]["state"]="ok"
+        out,changed=publish(old,{"minpaku":[dict(old["exhibitions"][0])]},{"minpaku"},"2026-09-11"); self.assertFalse(changed); self.assertEqual(old["updatedAt"],out["updatedAt"])
     def test_date_change_keeps_stable_id(self):
         old=seed(); new=[{**old["exhibitions"][0],"start":"2026-09-11","id":"generated"}]
         out,changed=publish(old,{"minpaku":new},{"minpaku"},"2026-09-11")
         self.assertTrue(changed); self.assertEqual("old",out["exhibitions"][0]["id"]); self.assertEqual(1,len(out["exhibitions"]))
-    def test_output_order_is_deterministic(self):
+    def test_existing_order_is_preserved(self):
         old=seed(); old["museums"].append({"id":"other","url":"https://example.com/","state":"ok"})
         old["exhibitions"].insert(0,{"id":"z","museumId":"other","title":"Z","start":"2026-10-01","end":"2026-10-02","url":"https://example.com/z","verifiedAt":"2026-09-02"})
         out,_=publish(old,{"minpaku":[dict(old["exhibitions"][1])]},{"minpaku"},"2026-09-11")
-        self.assertEqual(["old","z"],[e["id"] for e in out["exhibitions"]])
+        self.assertEqual(["z","old"],[e["id"] for e in out["exhibitions"]])
     def test_title_cleanup(self):
         self.assertEqual("禅とジブリ",clean_title("禅とジブリ 会場[ 新館 東山キューブ ]","kyocera"))
         self.assertEqual("円山応挙",clean_title("円山応挙 特別展","osakaart"))
