@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, copy, json, time
+import argparse, copy, json, re, time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -21,6 +21,11 @@ def validate(feed):
     if len(json.dumps(feed,ensure_ascii=False).encode())>MAX_BYTES: raise ValueError("feed too large")
 
 def _identity(entry): return entry["museumId"],entry["url"],entry["start"]
+def clean_title(title,museum_id):
+    if museum_id=="kyocera": title=re.sub(r"\s+会場\[.*\]\s*$","",title)
+    if museum_id=="bunpaku": title=re.sub(r"\s+\([月火水木金土日・祝休]+\)\s+[0-9・]+階展示室\s*$","",title)
+    if museum_id=="osakaart": title=re.sub(r"\s+特別展\s*$","",title)
+    return " ".join(title.split())
 def _match(prior_entries,entry):
     exact=[old for old in prior_entries if _identity(old)==_identity(entry)]
     if len(exact)==1: return exact[0]
@@ -28,6 +33,7 @@ def _match(prior_entries,entry):
     return same_url[0] if len(same_url)==1 else None
 def publish(previous,results,enabled,checked,retention_days=30):
     output=copy.deepcopy(previous); museums={m["id"]:m for m in output["museums"]}; existing=output["exhibitions"]; changed=False
+    if set(enabled)-set(museums): raise ValueError("unknown enabled museum")
     museum_order={m["id"]:index for index,m in enumerate(output["museums"])}
     for museum_id in sorted(enabled,key=lambda mid:museum_order[mid]):
         entries=results.get(museum_id)
@@ -35,6 +41,7 @@ def publish(previous,results,enabled,checked,retention_days=30):
         if len(entries)>50 or any(e["museumId"]!=museum_id for e in entries): raise ValueError("suspicious source result")
         old=[e for e in existing if e["museumId"]==museum_id]; merged=[]
         for entry in entries:
+            entry={**entry,"title":clean_title(entry["title"],museum_id)}
             prior=_match(old,entry)
             if prior:
                 candidate={**prior,**entry}; candidate["id"]=prior["id"]
