@@ -5,5 +5,5 @@
   {"id":"osakaart","url":"https://www.osaka-art-museum.jp/","path":"/special_exhibition/","autoPublish":true},
   {"id":"bunpaku","url":"https://www.bunpaku.or.jp/","path":"/exhi_special_post/","autoPublish":true},
   {"id":"shiga","url":"https://www.shigamuseum.jp/exhibitions/","path":"/exhibitions/[^/]+","autoPublish":true},
-  {"id":"minpaku","url":"https://www.minpaku.ac.jp/exhibition","path":"/ai1ec_event/[0-9]+","require":"特別展|企画展","caFile":"certs/nii-odca4g8rsa-pem.cer","autoPublish":false}
+  {"id":"minpaku","url":"https://www.minpaku.ac.jp/exhibition","path":"/ai1ec_event/[0-9]+","require":"特別展|企画展","caFile":"certs/nii-odca4g8rsa-pem.cer","autoPublish":true}
 ]
