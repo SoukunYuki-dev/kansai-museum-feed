@@ -1,40 +1,49 @@
-name: Museum feed
+name: Minpaku TLS diagnostic
 on:
-  schedule:
-    - cron: '17 21 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/museum-feed.yml', 'scripts/**', 'config/**', 'tests/**']
+
 permissions:
-  contents: write
-concurrency:
-  group: museum-feed
-  cancel-in-progress: false
+  contents: read
+
 jobs:
-  update:
+  diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Test
-        run: python3 -m unittest discover -s tests -v
-      - name: Collect official exhibition pages
-        run: python3 scripts/update_feed.py
-      - name: Publish meaningful changes
+      - name: Resolve official host
+        run: getent ahosts www.minpaku.ac.jp
+
+      - name: Inspect certificate chain
+        continue-on-error: true
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- exhibitions.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'Update museum exhibition feed'
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
-      - name: Save collection report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: museum-collection-report
-          path: report/
-          retention-days: 7
-          if-no-files-found: warn
+          set +e
+          openssl s_client \
+            -connect www.minpaku.ac.jp:443 \
+            -servername www.minpaku.ac.jp \
+            -showcerts \
+            -verify_return_error \
+            </dev/null 2>&1 | tee /tmp/minpaku-tls.txt
+          echo "openssl_exit=${PIPESTATUS[0]}"
+
+      - name: Inspect leaf certificate
+        continue-on-error: true
+        run: |
+          awk '/BEGIN CERTIFICATE/{found=1} found{print} /END CERTIFICATE/{exit}' \
+            /tmp/minpaku-tls.txt > /tmp/minpaku-leaf.pem
+          openssl x509 -in /tmp/minpaku-leaf.pem -noout \
+            -subject -issuer -serial -dates -fingerprint -sha256 \
+            -ext subjectAltName -ext authorityInfoAccess
+
+      - name: Test verified clients
+        continue-on-error: true
+        run: |
+          set +e
+          curl --fail --show-error --head --max-time 30 \
+            https://www.minpaku.ac.jp/
+          echo "curl_exit=$?"
+          python3 - <<'PY'
+          from urllib.request import urlopen
+          with urlopen("https://www.minpaku.ac.jp/", timeout=30) as response:
+              print(response.status, response.url)
+          PY
+          echo "python_exit=$?"
