@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-14",
+  "updatedAt": "2026-09-15",
   "museums": [
     {
       "id": "kyohaku",
@@ -27,7 +27,7 @@
       "genre": "歴史・考古",
       "priority": 99,
       "url": "https://www.minpaku.ac.jp/",
-      "state": "manual"
+      "state": "ok"
     },
     {
       "id": "kyocera",
@@ -475,11 +475,11 @@
     {
       "id": "14173c3d3c23a87e",
       "museumId": "minpaku",
-      "title": "特別展 沙流川に生きる ――サルンクㇽの近代",
+      "title": "国立民族学博物館特別展・令和8年度アイヌ工芸品展「沙流川に生きる ――サルンクㇽの近代 Nupursar kotan ta: sinrit orwano tan te pakno」",
       "start": "2026-09-25",
       "end": "2026-12-15",
       "url": "https://www.minpaku.ac.jp/ai1ec_event/69685",
-      "verifiedAt": "2026-09-02"
+      "verifiedAt": "2026-09-15"
     },
     {
       "id": "64d07ff72f7f56ef",
@@ -489,6 +489,15 @@
       "end": "2026-12-15",
       "url": "https://www.minpaku.ac.jp/ai1ec_event/69812",
       "verifiedAt": "2026-09-02"
+    },
+    {
+      "id": "387f0714789f2138",
+      "museumId": "minpaku",
+      "title": "みんぱく開館50周年記念特別展「触覚を取り戻せ!-深化し続けるユニバーサル・ミュージアム」",
+      "start": "2027-03-18",
+      "end": "2027-06-15",
+      "url": "https://www.minpaku.ac.jp/ai1ec_event/74313",
+      "verifiedAt": "2026-09-15"
     },
     {
       "id": "b9349995ff890242",
