@@ -21,4 +21,9 @@ class FeedTests(unittest.TestCase):
         old=seed(); new=[{**old["exhibitions"][0],"start":"2026-09-11","id":"generated"}]
         out,changed=publish(old,{"minpaku":new},{"minpaku"},"2026-09-11")
         self.assertTrue(changed); self.assertEqual("old",out["exhibitions"][0]["id"]); self.assertEqual(1,len(out["exhibitions"]))
+    def test_output_order_is_deterministic(self):
+        old=seed(); old["museums"].append({"id":"other","url":"https://example.com/","state":"ok"})
+        old["exhibitions"].insert(0,{"id":"z","museumId":"other","title":"Z","start":"2026-10-01","end":"2026-10-02","url":"https://example.com/z","verifiedAt":"2026-09-02"})
+        out,_=publish(old,{"minpaku":[dict(old["exhibitions"][1])]},{"minpaku"},"2026-09-11")
+        self.assertEqual(["old","z"],[e["id"] for e in out["exhibitions"]])
 if __name__=="__main__": unittest.main()

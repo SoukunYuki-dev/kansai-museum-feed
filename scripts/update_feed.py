@@ -28,7 +28,8 @@ def _match(prior_entries,entry):
     return same_url[0] if len(same_url)==1 else None
 def publish(previous,results,enabled,checked,retention_days=30):
     output=copy.deepcopy(previous); museums={m["id"]:m for m in output["museums"]}; existing=output["exhibitions"]; changed=False
-    for museum_id in enabled:
+    museum_order={m["id"]:index for index,m in enumerate(output["museums"])}
+    for museum_id in sorted(enabled,key=lambda mid:museum_order[mid]):
         entries=results.get(museum_id)
         if not entries: continue
         if len(entries)>50 or any(e["museumId"]!=museum_id for e in entries): raise ValueError("suspicious source result")
@@ -45,7 +46,7 @@ def publish(previous,results,enabled,checked,retention_days=30):
         replacement=merged+retained
         if replacement!=old: changed=True
         existing=[e for e in existing if e["museumId"]!=museum_id]+replacement; museums[museum_id]["state"]="ok"
-    output["exhibitions"]=existing
+    output["exhibitions"]=sorted(existing,key=lambda e:(museum_order[e["museumId"]],e["start"],e["id"]))
     if changed: output["updatedAt"]=checked
     validate(output); return output,changed
 
@@ -59,7 +60,7 @@ def main():
             entries=[e for e in extract(fetch(source["url"]),source) if e["end"]>=checked]; results[source["id"]]=entries
             report.append({"museumId":source["id"],"status":"obtained" if entries else "needs_review","count":len(entries),"autoPublish":bool(source.get("autoPublish")),"entries":entries})
         except Exception as error:
-            results[source["id"]]=[]; report.append({"museumId":source["id"],"status":"error","error":type(error).__name__,"count":0,"autoPublish":bool(source.get("autoPublish"))})
+            results[source["id"]]=[]; report.append({"museumId":source["id"],"status":"error","error":type(error).__name__,"errorDetail":str(error)[:240],"count":0,"autoPublish":bool(source.get("autoPublish"))})
         time.sleep(1)
     output,changed=publish(previous,results,enabled,checked)
     report_path=Path(args.report); report_path.parent.mkdir(parents=True,exist_ok=True); report_path.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
