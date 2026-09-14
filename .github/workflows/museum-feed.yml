@@ -48,7 +48,7 @@ jobs:
           grep -F "Verify return code: 0 (ok)" /tmp/minpaku-verified.txt
 
       - name: Test curl with normal verification
-      　continue-on-error: true
+        continue-on-error: true
         run: |
           set -euo pipefail
           curl --fail --show-error --silent \
