@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Test
         run: python3 -m unittest discover -s tests -v
       - name: Collect official exhibition pages
@@ -32,7 +32,7 @@ jobs:
           fi
       - name: Save collection report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: museum-collection-report
           path: report/
