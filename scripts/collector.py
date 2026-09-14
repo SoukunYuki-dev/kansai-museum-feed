@@ -45,8 +45,10 @@ def fetch(url):
         return raw.decode(response.headers.get_content_charset() or "utf-8")
 
 def _range(text):
-    match=RANGE.search(unicodedata.normalize("NFKC",text))
-    if not match or not match["ay"]: return None
+    matches=list(RANGE.finditer(unicodedata.normalize("NFKC",text)))
+    if len(matches)!=1: return None
+    match=matches[0]
+    if not match["ay"]: return None
     start=date(int(match["ay"]),int(match["am"]),int(match["ad"]))
     end_year=int(match["by"]) if match["by"] else start.year+(int(match["bm"])<start.month)
     end=date(end_year,int(match["bm"]),int(match["bd"]))
