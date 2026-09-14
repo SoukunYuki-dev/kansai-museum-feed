@@ -1,4 +1,4 @@
-name: Minpaku TLS diagnostic
+name: Minpaku trusted-chain diagnostic
 on:
   workflow_dispatch:
 
@@ -10,40 +10,74 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Resolve official host
-        run: getent ahosts www.minpaku.ac.jp
-
-      - name: Inspect certificate chain
-        continue-on-error: true
+      - name: Download and verify official intermediate CA
         run: |
-          set +e
+          set -euo pipefail
+          cert=/tmp/nii-odca4g8rsa-pem.cer
+          curl --fail --show-error --silent \
+            --proto '=https' --tlsv1.2 --max-time 30 \
+            https://repo1.secomtrust.net/sppca/nii/odca4/nii-odca4g8rsa-pem.cer \
+            --output "$cert"
+
+          actual="$(openssl x509 -in "$cert" -outform DER | sha256sum | awk '{print toupper($1)}')"
+          expected="7A4AD9E1BA2DFB08F752A124032F7058868062E9841785623EB4136783A53FFC"
+          echo "sha256=$actual"
+          test "$actual" = "$expected"
+
+          openssl x509 -in "$cert" -noout \
+            -subject -issuer -dates -fingerprint -sha256
+
+      - name: Build augmented default CA bundle
+        run: |
+          set -euo pipefail
+          cp /etc/ssl/certs/ca-certificates.crt /tmp/minpaku-ca-bundle.pem
+          printf '\n' >> /tmp/minpaku-ca-bundle.pem
+          cat /tmp/nii-odca4g8rsa-pem.cer >> /tmp/minpaku-ca-bundle.pem
+
+      - name: Test OpenSSL with normal verification
+        run: |
+          set -euo pipefail
           openssl s_client \
             -connect www.minpaku.ac.jp:443 \
             -servername www.minpaku.ac.jp \
-            -showcerts \
+            -verify_hostname www.minpaku.ac.jp \
             -verify_return_error \
-            </dev/null 2>&1 | tee /tmp/minpaku-tls.txt
-          echo "openssl_exit=${PIPESTATUS[0]}"
+            -CAfile /tmp/minpaku-ca-bundle.pem \
+            </dev/null 2>&1 | tee /tmp/minpaku-verified.txt
+          grep -F "Verify return code: 0 (ok)" /tmp/minpaku-verified.txt
 
-      - name: Inspect leaf certificate
-        continue-on-error: true
+      - name: Test curl with normal verification
         run: |
-          awk '/BEGIN CERTIFICATE/{found=1} found{print} /END CERTIFICATE/{exit}' \
-            /tmp/minpaku-tls.txt > /tmp/minpaku-leaf.pem
-          openssl x509 -in /tmp/minpaku-leaf.pem -noout \
-            -subject -issuer -serial -dates -fingerprint -sha256 \
-            -ext subjectAltName -ext authorityInfoAccess
+          set -euo pipefail
+          curl --fail --show-error --silent \
+            --cacert /tmp/minpaku-ca-bundle.pem \
+            --proto '=https' --tlsv1.2 --max-time 30 \
+            https://www.minpaku.ac.jp/ \
+            --output /tmp/minpaku.html
+          test -s /tmp/minpaku.html
+          echo "curl_verified_bytes=$(wc -c < /tmp/minpaku.html)"
 
-      - name: Test verified clients
-        continue-on-error: true
+      - name: Test Python with augmented default trust
         run: |
-          set +e
-          curl --fail --show-error --head --max-time 30 \
-            https://www.minpaku.ac.jp/
-          echo "curl_exit=$?"
           python3 - <<'PY'
-          from urllib.request import urlopen
-          with urlopen("https://www.minpaku.ac.jp/", timeout=30) as response:
-              print(response.status, response.url)
+          import ssl
+          from urllib.request import Request, urlopen
+
+          context = ssl.create_default_context()
+          context.load_verify_locations(
+              cafile="/tmp/nii-odca4g8rsa-pem.cer"
+          )
+          request = Request(
+              "https://www.minpaku.ac.jp/",
+              headers={
+                  "User-Agent":
+                  "KansaiMuseumFeed/1.0 (+personal exhibition index)"
+              },
+          )
+          with urlopen(request, context=context, timeout=30) as response:
+              body = response.read(2 * 1024 * 1024 + 1)
+              assert response.status == 200
+              assert len(body) <= 2 * 1024 * 1024
+              print(f"python_verified_status={response.status}")
+              print(f"python_verified_bytes={len(body)}")
           PY
-          echo "python_exit=$?"
