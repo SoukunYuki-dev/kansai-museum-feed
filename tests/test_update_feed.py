@@ -1,7 +1,8 @@
-import json, sys, tempfile, unittest
+import hashlib, json, ssl, sys, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[1]/"scripts"))
+import collector
 from collector import extract
 import update_feed
 from update_feed import clean_title, publish, validate
@@ -9,6 +10,47 @@ from update_feed import clean_title, publish, validate
 def seed():
     return {"schemaVersion":1,"updatedAt":"2026-09-02","museums":[{"id":"minpaku","name":"国立民族学博物館","region":"大阪","genre":"民族学","priority":90,"url":"https://www.minpaku.ac.jp/","state":"manual"}],"exhibitions":[{"id":"old","museumId":"minpaku","title":"旧題","start":"2026-09-10","end":"2026-12-15","url":"https://www.minpaku.ac.jp/ai1ec_event/69812","verifiedAt":"2026-09-02"}]}
 class FeedTests(unittest.TestCase):
+    def test_custom_ca_context_keeps_verification_enabled(self):
+        cert=Path(__file__).parents[1]/"certs"/"nii-odca4g8rsa-pem.cer"
+        make_context=getattr(collector,"tls_context",lambda _cert: None)
+        context=make_context(cert)
+        self.assertIsInstance(context,ssl.SSLContext)
+        self.assertEqual(ssl.CERT_REQUIRED,context.verify_mode)
+        self.assertTrue(context.check_hostname)
+        self.assertTrue(context.verify_flags & ssl.VERIFY_X509_PARTIAL_CHAIN)
+        fingerprints={
+            hashlib.sha256(der).hexdigest().upper()
+            for der in context.get_ca_certs(binary_form=True)
+        }
+        self.assertIn(
+            "7A4AD9E1BA2DFB08F752A124032F7058868062E9841785623EB4136783A53FFC",
+            fingerprints,
+        )
+
+    def test_source_ca_file_is_used_for_collection(self):
+        html='<section><h2>企画展 新しい展示</h2><p>2026年9月10日～2026年12月15日</p><a href="/ai1ec_event/69812">企画展 新しい展示</a></section>'
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); feed=root/"feed.json"; sources=root/"sources.json"; report=root/"report.json"
+            cert=Path(__file__).parents[1]/"certs"/"nii-odca4g8rsa-pem.cer"
+            feed.write_text(json.dumps(seed(),ensure_ascii=False),encoding="utf-8")
+            sources.write_text(json.dumps([{
+                "id":"minpaku",
+                "url":"https://www.minpaku.ac.jp/",
+                "path":"/ai1ec_event/[0-9]+",
+                "require":"特別展|企画展",
+                "caFile":str(cert),
+                "autoPublish":False,
+            }]),encoding="utf-8")
+            def protected_fetch(_url,cafile=None):
+                if cafile!=str(cert): raise ValueError("custom CA not forwarded")
+                return html
+            argv=["update_feed.py","--feed",str(feed),"--sources",str(sources),"--report",str(report)]
+            with patch.object(sys,"argv",argv), patch.object(update_feed,"fetch",side_effect=protected_fetch), patch.object(update_feed.time,"sleep"):
+                update_feed.main()
+            result=json.loads(report.read_text(encoding="utf-8"))
+            self.assertEqual("obtained",result[0]["status"])
+            self.assertEqual(1,result[0]["count"])
+
     def test_minpaku_extract(self):
         html='<section><h2>企画展 新しい展示</h2><p>2026年9月10日～2026年12月15日</p><a href="/ai1ec_event/69812">企画展 新しい展示</a></section>'
         rows=extract(html,{"id":"minpaku","url":"https://www.minpaku.ac.jp/","path":r"/ai1ec_event/[0-9]+","require":"特別展|企画展"})
