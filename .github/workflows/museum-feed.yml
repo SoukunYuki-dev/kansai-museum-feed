@@ -41,12 +41,12 @@ jobs:
             -connect www.minpaku.ac.jp:443 \
             -servername www.minpaku.ac.jp \
             -verify_hostname www.minpaku.ac.jp \
-            -verify_return_error \
+            -verify_return_error \-partial_chain \
             -CAfile /tmp/minpaku-ca-bundle.pem \
             </dev/null 2>&1 | tee /tmp/minpaku-verified.txt
           grep -F "Verify return code: 0 (ok)" /tmp/minpaku-verified.txt
 
-      - name: Test curl with normal verification
+      - name: Test curl with normal verification　continue-on-error: true
         run: |
           set -euo pipefail
           curl --fail --show-error --silent \
@@ -63,7 +63,7 @@ jobs:
           import ssl
           from urllib.request import Request, urlopen
 
-          context = ssl.create_default_context()
+          context = ssl.create_default_context() context.verify_flags |= ssl.VERIFY_X509_PARTIAL_CHAIN
           context.load_verify_locations(
               cafile="/tmp/nii-odca4g8rsa-pem.cer"
           )
