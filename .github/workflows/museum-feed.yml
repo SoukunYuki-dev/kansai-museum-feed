@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/museum-feed.yml', 'scripts/**', 'config/**', 'tests/**']
+    paths: ['.github/workflows/museum-feed.yml', 'scripts/**', 'config/**', 'certs/**', 'tests/**']
 permissions:
   contents: write
 concurrency:
