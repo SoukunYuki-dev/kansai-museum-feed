@@ -105,7 +105,7 @@ def main():
     for source in sources:
         if source.get("autoPublish"): enabled.add(source["id"])
         try:
-            entries=[e for e in extract(fetch(source["url"]),source) if e["end"]>=checked]; results[source["id"]]=entries
+            entries=[e for e in extract(fetch(source["url"],source.get("caFile")),source) if e["end"]>=checked]; results[source["id"]]=entries
             report.append({"museumId":source["id"],"status":"obtained" if entries else "needs_review","count":len(entries),"autoPublish":bool(source.get("autoPublish")),"entries":entries})
         except Exception as error:
             results[source["id"]]=[]; report.append({"museumId":source["id"],"status":"error","error":type(error).__name__,"errorDetail":str(error)[:240],"count":0,"autoPublish":bool(source.get("autoPublish"))})

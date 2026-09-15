@@ -1,9 +1,9 @@
 from __future__ import annotations
-import hashlib, json, re, unicodedata
+import hashlib, json, re, ssl, unicodedata
 from datetime import date
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
 DATE=r"(?:(?P<{p}y>20\d{{2}})\s*[年./-]\s*)?(?P<{p}m>\d{{1,2}})\s*[月./-]\s*(?P<{p}d>\d{{1,2}})\s*日?"
 RANGE=re.compile(DATE.format(p="a")+r"\s*(?:\([^)]*\))?\s*[～〜~–—－-]\s*"+DATE.format(p="b"))
@@ -36,10 +36,18 @@ class SameHostRedirect(HTTPRedirectHandler):
         if urlsplit(new).scheme!="https" or urlsplit(new).netloc!=urlsplit(req.full_url).netloc: raise ValueError("redirect outside official host")
         return super().redirect_request(req,fp,code,msg,headers,new)
 
-def fetch(url):
+def tls_context(cafile):
+    context=ssl.create_default_context()
+    context.verify_flags|=ssl.VERIFY_X509_PARTIAL_CHAIN
+    context.load_verify_locations(cafile=str(cafile))
+    return context
+
+def fetch(url,cafile=None):
     if urlsplit(url).scheme!="https": raise ValueError("HTTPS required")
     req=Request(url,headers={"User-Agent":"KansaiMuseumFeed/1.0 (+personal exhibition index)","Accept":"text/html"})
-    with build_opener(SameHostRedirect()).open(req,timeout=20) as response:
+    handlers=[SameHostRedirect()]
+    if cafile: handlers.append(HTTPSHandler(context=tls_context(cafile)))
+    with build_opener(*handlers).open(req,timeout=20) as response:
         raw=response.read(2*1024*1024+1)
         if len(raw)>2*1024*1024: raise ValueError("page too large")
         return raw.decode(response.headers.get_content_charset() or "utf-8")
