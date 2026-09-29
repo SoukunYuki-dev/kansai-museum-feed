@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-15",
+  "updatedAt": "2026-09-29",
   "museums": [
     {
       "id": "kyohaku",
@@ -529,11 +529,11 @@
     {
       "id": "4558f1e45e6a16a0",
       "museumId": "kyocera",
-      "title": "スタジオジブリ企画制作『白隠さんの禅』京都展",
+      "title": "「スタジオジブリ企画制作 白隠さんの禅」京都展",
       "start": "2026-12-17",
       "end": "2027-01-11",
       "url": "https://kyotocity-kyocera.museum/exhibition/20261217-20270111",
-      "verifiedAt": "2026-09-14"
+      "verifiedAt": "2026-09-29"
     },
     {
       "id": "70872ce1d5efbaeb",
