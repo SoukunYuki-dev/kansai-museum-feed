@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-29",
+  "updatedAt": "2026-10-01",
   "museums": [
     {
       "id": "kyohaku",
@@ -381,6 +381,15 @@
       "end": "2026-11-15",
       "url": "https://www.bunpaku.or.jp/exhi_special_post/20260919-1115/",
       "verifiedAt": "2026-09-14"
+    },
+    {
+      "id": "c3cc5722e7956d9d",
+      "museumId": "bunpaku",
+      "title": "令和6年能登半島地震復興祈念 不滅の力 永井豪 -永井豪記念館リバイバル-",
+      "start": "2026-11-28",
+      "end": "2027-01-11",
+      "url": "https://www.bunpaku.or.jp/exhi_special_post/20261128-20270111/",
+      "verifiedAt": "2026-10-01"
     },
     {
       "id": "ccc1f2b2db1f7441",
