@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-01",
+  "updatedAt": "2026-10-02",
   "museums": [
     {
       "id": "kyohaku",
@@ -615,6 +615,15 @@
       "end": "2027-02-21",
       "url": "https://nakka-art.jp/exhibition-post/osaka-directory-dir15/",
       "verifiedAt": "2026-09-14"
+    },
+    {
+      "id": "a1a3cff7a2582fc0",
+      "museumId": "nakka",
+      "title": "つくる女性の100年",
+      "start": "2027-01-09",
+      "end": "2027-03-22",
+      "url": "https://nakka-art.jp/exhibition-post/paving-the-way100/",
+      "verifiedAt": "2026-10-02"
     },
     {
       "id": "ef2e4d15dc7fee29",
