@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-02",
+  "updatedAt": "2026-10-03",
   "museums": [
     {
       "id": "kyohaku",
@@ -390,6 +390,15 @@
       "end": "2027-01-11",
       "url": "https://www.bunpaku.or.jp/exhi_special_post/20261128-20270111/",
       "verifiedAt": "2026-10-01"
+    },
+    {
+      "id": "d68b7d04abf1f510",
+      "museumId": "bunpaku",
+      "title": "ジミー大西「ホームタウン」京都展",
+      "start": "2026-12-05",
+      "end": "2027-02-07",
+      "url": "https://www.bunpaku.or.jp/exhi_special_post/20261205-20270207/",
+      "verifiedAt": "2026-10-03"
     },
     {
       "id": "ccc1f2b2db1f7441",
