@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-09",
+  "updatedAt": "2026-10-17",
   "museums": [
     {
       "id": "kyohaku",
@@ -565,11 +565,11 @@
     {
       "id": "cccd8130f864eb13",
       "museumId": "kyocera",
-      "title": "思考する彫刻家 ラファエル・ザルカと堀内正和 ―幾何学とモダニティをめぐる対話(仮称)",
+      "title": "ラファエル・ザルカ:幾何学、時間、スケートボード",
       "start": "2027-02-06",
       "end": "2027-05-05",
       "url": "https://kyotocity-kyocera.museum/exhibition/20270206-20270505",
-      "verifiedAt": "2026-09-14"
+      "verifiedAt": "2026-10-17"
     },
     {
       "id": "1dd3d180b0921f9f",
