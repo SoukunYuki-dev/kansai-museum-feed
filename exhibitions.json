@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-17",
+  "updatedAt": "2026-10-21",
   "museums": [
     {
       "id": "kyohaku",
@@ -439,11 +439,11 @@
     {
       "id": "6bdcc685244c95fa",
       "museumId": "shiga",
-      "title": "佐川晃司展",
+      "title": "佐川晃司展 絵画、居場所のこと",
       "start": "2027-01-15",
       "end": "2027-03-22",
       "url": "https://www.shigamuseum.jp/exhibitions/12978/",
-      "verifiedAt": "2026-09-13"
+      "verifiedAt": "2026-10-21"
     },
     {
       "id": "003cbb53bb1294c4",
